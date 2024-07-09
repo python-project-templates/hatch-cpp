@@ -1,0 +1,127 @@
+[build-system]
+requires = ["hatchling>=1.20"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hatch-cpp"
+description = "Hatch plugin for C++ builds"
+version = "0.1.0"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Tim Paine", email = "t.paine154@gmail.com" },
+]
+keywords = [
+    "hatch",
+    "python",
+    "build",
+    "cpp",
+    "c++",
+    "cmake",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+]
+
+dependencies = [
+    "hatchling>=1.20",
+]
+
+[project.optional-dependencies]
+develop = [
+    "bump-my-version",
+    "isort>=5,<6",
+    "ruff>=0.3,<0.5",
+    "twine",
+    "wheel",
+    # test
+    "pytest",
+    "pytest-cov",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.entry-points.hatch]
+cpp = "hatch_cpp.hooks"
+
+[project.scripts]
+hatch-cpp = "hatch_cpp.cli:main"
+
+[project.urls]
+Repository = "https://github.com/python-project-templates/hatch-cpp"
+Homepage = "https://github.com/python-project-templates/hatch-cpp"
+
+[tool.bumpversion]
+current_version = "0.1.0"
+commit = true
+tag = false
+
+[[tool.bumpversion.files]]
+filename = "hatch_cpp/__init__.py"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[tool.hatch.build]
+artifacts = []
+
+[tool.hatch.build.sources]
+src = "/"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/hatch_cpp",
+    "LICENSE",
+    "README.md",
+]
+exclude = [
+    ".copier-answers.yml",
+    "/.github",
+    "/.gitignore",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "/hatch_cpp",
+]
+exclude = [
+    ".copier-answers.yml",
+    "/.github",
+    "/.gitignore",
+    "/pyproject.toml",
+]
+
+[tool.hatch.build.targets.wheel.shared-data]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+testpaths = "hatch_cpp/tests"
+
+[tool.ruff]
+line-length = 150
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+default-section = "third-party"
+known-first-party = ["hatch_cpp"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
