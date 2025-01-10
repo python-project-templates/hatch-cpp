@@ -43,10 +43,13 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
         libraries = [HatchCppLibrary(**library_kwargs) for library_kwargs in library_kwargs]
         platform = HatchCppPlatform.default()
         if config.toolchain == "raw":
-            # g++ basic-project/basic.cpp -I. -I/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/include/python3.11/  -undefined dynamic_lookup -fPIC -shared -o extension.so
             build_plan = HatchCppBuildPlan(libraries=libraries, platform=platform)
             build_plan.generate()
-            build_plan.execute(verbose=config.verbose)
+            if config.verbose:
+                for command in build_plan.commands:
+                    self._logger.info(command)
+            build_plan.execute()
+
         # build_kwargs = config.build_kwargs
         # if version == "editable":
         #     build_kwargs = config.editable_build_kwargs or build_kwargs

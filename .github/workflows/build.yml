@@ -29,8 +29,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -56,7 +56,15 @@ jobs:
 
     - name: Test
       run: make coverage
-
+      if: matrix.os != 'windows-latest'
+    
+    - name: Test
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        make coverage
+      shell: cmd
+      if: matrix.os == 'windows-latest'
+    
     - name: Upload test results (Python)
       uses: actions/upload-artifact@v4
       with:
@@ -68,7 +76,7 @@ jobs:
       uses: EnricoMi/publish-unit-test-result-action@v2
       with:
         files: '**/junit.xml'
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
 
     - name: Upload coverage
       uses: codecov/codecov-action@v5
@@ -82,4 +90,4 @@ jobs:
       with:
         name: dist-${{matrix.os}}
         path: dist
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
