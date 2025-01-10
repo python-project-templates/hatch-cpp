@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling>=1.20"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hatch-cpp-test-project-basic"
+description = "Basic test project for hatch-cpp"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "hatchling>=1.20",
+    "hatch-cpp",
+]
+
+[tool.hatch.build]
+artifacts = [
+    "basic_project/*.dll",
+    "basic_project/*.dylib",
+    "basic_project/*.so",
+]
+
+[tool.hatch.build.sources]
+src = "/"
+
+[tool.hatch.build.targets.sdist]
+packages = ["basic_project"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["basic_project"]
+
+[tool.hatch.build.hooks.hatch-cpp]
+build-config-class = "hatch_cpp.HatchCppBuildConfig"
+build-plan-class = "hatch_cpp.HatchCppBuildPlan"
+verbose = true
+libraries = [
+    {name = "basic_project/extension", sources = ["cpp/basic-project/basic.cpp"], include-dirs = ["cpp"]}
+]
+
+# build-function = "hatch_cpp.cpp_builder"
+
+# [tool.hatch.build.hooks.defaults]
+# build-type = "release"
+
+# [tool.hatch.build.hooks.env-vars]
+# TODO: these will all be available via
+# CLI after https://github.com/pypa/hatch/pull/1743
+# e.g. --hatch-cpp-build-type=debug
+# build-type = "BUILD_TYPE"
+# ccache = "USE_CCACHE"
+# manylinux = "MANYLINUX"
+# vcpkg = "USE_VCPKG"
+
+# [tool.hatch.build.hooks.cmake]
+
+# [tool.hatch.build.hooks.vcpkg]
+# triplets = {linux="x64-linux", macos="x64-osx", windows="x64-windows-static-md"}
+# clone = true
+# update = true
+
+# [tool.hatch.build.hooks.hatch-cpp.build-kwargs]
+# path = "cpp"
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+testpaths = "basic_project/tests"

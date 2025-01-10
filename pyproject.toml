@@ -52,8 +52,8 @@ develop = [
 [project.entry-points.hatch]
 cpp = "hatch_cpp.hooks"
 
-[project.scripts]
-hatch-cpp = "hatch_cpp.cli:main"
+# [project.scripts]
+# hatch-cpp = "hatch_cpp.cli:main"
 
 [project.urls]
 Repository = "https://github.com/python-project-templates/hatch-cpp"
