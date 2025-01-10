@@ -1,7 +1,7 @@
 from os import listdir
 from pathlib import Path
 from shutil import rmtree
-from subprocess import check_output
+from subprocess import check_call
 from sys import path, platform
 
 
@@ -9,7 +9,7 @@ class TestProject:
     def test_basic(self):
         rmtree("hatch_cpp/tests/test_project_basic/basic_project/extension.so", ignore_errors=True)
         rmtree("hatch_cpp/tests/test_project_basic/basic_project/extension.pyd", ignore_errors=True)
-        check_output(
+        check_call(
             [
                 "hatchling",
                 "build",
@@ -30,7 +30,7 @@ class TestProject:
     def test_override_classes(self):
         rmtree("hatch_cpp/tests/test_project_override_classes/basic_project/extension.so", ignore_errors=True)
         rmtree("hatch_cpp/tests/test_project_override_classes/basic_project/extension.pyd", ignore_errors=True)
-        check_output(
+        check_call(
             [
                 "hatchling",
                 "build",

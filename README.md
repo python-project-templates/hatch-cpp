@@ -9,5 +9,27 @@ Hatch plugin for C++ builds
 
 ## Overview
 
+A simple, extensible C++ build plugin for [hatch](https://hatch.pypa.io/latest/).
+
+```toml
+[tool.hatch.build.hooks.hatch-cpp]
+libraries = [
+    {name = "basic_project/extension", sources = ["cpp/basic-project/basic.cpp"], include-dirs = ["cpp"]}
+]
+```
+
+For more complete systems, see:
+- [scikit-build-core](https://github.com/scikit-build/scikit-build-core)
+- [setuptools](https://setuptools.pypa.io/en/latest/userguide/ext_modules.html)
+
+## Environment Variables
+| Name | Default | Description |
+|:-----|:--------|:------------|
+|`CC`| | |
+|`CXX`| | |
+|`LD`| | |
+|`HATCH_CPP_PLATFORM`| | |
+|`HATCH_CPP_DISABLE_CCACHE`| | |
+
 > [!NOTE]
 > This library was generated using [copier](https://copier.readthedocs.io/en/stable/) from the [Base Python Project Template repository](https://github.com/python-project-templates/base).
