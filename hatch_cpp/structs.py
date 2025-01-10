@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from os import environ, system
 from pathlib import Path
 from sys import executable, platform as sys_platform
 from sysconfig import get_path
-from typing import Literal
+from typing import List, Literal, Optional
 
-from hatchling.builders.config import BuilderConfig
+from pydantic import BaseModel, Field
 
 __all__ = (
     "HatchCppBuildConfig",
@@ -25,42 +24,26 @@ PlatformDefaults = {
 }
 
 
-@dataclass
-class HatchCppBuildConfig(BuilderConfig):
-    """Build config values for Hatch C++ Builder."""
-
-    toolchain: str | None = field(default="raw")
-    libraries: list[dict[str, str]] = field(default_factory=list)
-    verbose: bool | None = field(default=False)
-    # build_function: str | None = None
-    # build_kwargs: t.Mapping[str, str] = field(default_factory=dict)
-    # editable_build_kwargs: t.Mapping[str, str] = field(default_factory=dict)
-    # ensured_targets: list[str] = field(default_factory=list)
-    # skip_if_exists: list[str] = field(default_factory=list)
-
-
-@dataclass
-class HatchCppLibrary(object):
+class HatchCppLibrary(BaseModel):
     """A C++ library."""
 
     name: str
-    sources: list[str]
+    sources: List[str]
 
-    include_dirs: list[str] = field(default_factory=list)
-    library_dirs: list[str] = field(default_factory=list)
-    libraries: list[str] = field(default_factory=list)
-    extra_compile_args: list[str] = field(default_factory=list)
-    extra_link_args: list[str] = field(default_factory=list)
-    extra_objects: list[str] = field(default_factory=list)
-    define_macros: list[str] = field(default_factory=list)
-    undef_macros: list[str] = field(default_factory=list)
+    include_dirs: List[str] = Field(default_factory=list, alias="include-dirs")
+    library_dirs: List[str] = Field(default_factory=list, alias="library-dirs")
+    libraries: List[str] = Field(default_factory=list)
+    extra_compile_args: List[str] = Field(default_factory=list, alias="extra-compile-args")
+    extra_link_args: List[str] = Field(default_factory=list, alias="extra-link-args")
+    extra_objects: List[str] = Field(default_factory=list, alias="extra-objects")
+    define_macros: List[str] = Field(default_factory=list, alias="define-macros")
+    undef_macros: List[str] = Field(default_factory=list, alias="undef-macros")
 
-    export_symbols: list[str] = field(default_factory=list)
-    depends: list[str] = field(default_factory=list)
+    export_symbols: List[str] = Field(default_factory=list, alias="export-symbols")
+    depends: List[str] = Field(default_factory=list)
 
 
-@dataclass
-class HatchCppPlatform(object):
+class HatchCppPlatform(BaseModel):
     cc: str
     cxx: str
     platform: Platform
@@ -133,11 +116,10 @@ class HatchCppPlatform(object):
         return flags
 
 
-@dataclass
-class HatchCppBuildPlan(object):
-    libraries: list[HatchCppLibrary] = field(default_factory=list)
-    platform: HatchCppPlatform = field(default_factory=HatchCppPlatform.default)
-    commands: list[str] = field(default_factory=list)
+class HatchCppBuildPlan(BaseModel):
+    libraries: List[HatchCppLibrary] = Field(default_factory=list)
+    platform: HatchCppPlatform = Field(default_factory=HatchCppPlatform.default)
+    commands: List[str] = Field(default_factory=list)
 
     def generate(self):
         self.commands = []
@@ -157,3 +139,17 @@ class HatchCppBuildPlan(object):
                 temp_obj = Path(f"{library.name}.obj")
                 if temp_obj.exists():
                     temp_obj.unlink()
+
+
+class HatchCppBuildConfig(BaseModel):
+    """Build config values for Hatch C++ Builder."""
+
+    toolchain: Optional[str] = Field(default="raw")
+    libraries: List[HatchCppLibrary] = Field(default_factory=list)
+    verbose: Optional[bool] = Field(default=False)
+    platform: Optional[HatchCppPlatform] = Field(default_factory=HatchCppPlatform.default)
+    # build_function: str | None = None
+    # build_kwargs: t.Mapping[str, str] = field(default_factory=dict)
+    # editable_build_kwargs: t.Mapping[str, str] = field(default_factory=dict)
+    # ensured_targets: list[str] = field(default_factory=list)
+    # skip_if_exists: list[str] = field(default_factory=list)
