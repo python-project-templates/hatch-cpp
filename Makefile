@@ -99,7 +99,7 @@ deep-clean: ## clean everything from the repository
 	git clean -fdx
 
 clean: ## clean the repository
-	rm -rf .coverage coverage cover htmlcov logs build dist *.egg-info
+	rm -rf .coverage coverage cover htmlcov logs build dist *.egg-info hatch_cpp/tests/*/dist hatch_cpp/tests/*/build hatch_cpp/tests/*/*/*.so hatch_cpp/tests/*/*/*.pyd
 
 ############################################################################################
 

@@ -117,8 +117,7 @@ class HatchCppPlatform(object):
             flags += " " + " ".join(f"/LIBPATH:{lib}" for lib in library.library_dirs)
             flags += " " + " ".join(f"/D{macro}" for macro in library.define_macros)
             flags += " " + " ".join(f"/U{macro}" for macro in library.undef_macros)
-            flags += f" /Fo{library.name}.obj"
-            flags += f" /Fe{library.name}.pyd"
+            flags += f" /Fo{library.name}.pyd"
         # clean
         while flags.count("  "):
             flags = flags.replace("  ", " ")
@@ -138,9 +137,7 @@ class HatchCppBuildPlan(object):
             self.commands.append(f"{self.platform.cc} {' '.join(library.sources)} {flags}")
         return self.commands
 
-    def execute(self, verbose: bool = True):
+    def execute(self):
         for command in self.commands:
-            if verbose:
-                print(f"Running command: {command}")
             system(command)
         return self.commands
