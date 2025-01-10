@@ -49,6 +49,7 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
                 for command in build_plan.commands:
                     self._logger.info(command)
             build_plan.execute()
+            build_plan.cleanup()
 
         # build_kwargs = config.build_kwargs
         # if version == "editable":
