@@ -58,7 +58,7 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
         # Log commands if in verbose mode
         if config.verbose:
             for command in build_plan.commands:
-                self._logger.info(command)
+                self._logger.warning(command)
 
         # Execute build plan
         build_plan.execute()

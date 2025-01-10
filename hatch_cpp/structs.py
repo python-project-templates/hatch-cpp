@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from os import environ, system
 from pathlib import Path
+from shutil import which
 from sys import executable, platform as sys_platform
 from sysconfig import get_path
 from typing import List, Literal, Optional
@@ -15,12 +16,14 @@ __all__ = (
     "HatchCppBuildPlan",
 )
 
-Platform = Literal["linux", "darwin", "win32"]
+BuildType = Literal["debug", "release"]
 CompilerToolchain = Literal["gcc", "clang", "msvc"]
+Language = Literal["c", "c++"]
+Platform = Literal["linux", "darwin", "win32"]
 PlatformDefaults = {
-    "linux": {"CC": "gcc", "CXX": "g++"},
-    "darwin": {"CC": "clang", "CXX": "clang++"},
-    "win32": {"CC": "cl", "CXX": "cl"},
+    "linux": {"CC": "gcc", "CXX": "g++", "LD": "ld"},
+    "darwin": {"CC": "clang", "CXX": "clang++", "LD": "ld"},
+    "win32": {"CC": "cl", "CXX": "cl", "LD": "link"},
 }
 
 
@@ -29,7 +32,7 @@ class HatchCppLibrary(BaseModel):
 
     name: str
     sources: List[str]
-
+    language: Language = "c++"
     include_dirs: List[str] = Field(default_factory=list, alias="include-dirs")
     library_dirs: List[str] = Field(default_factory=list, alias="library-dirs")
     libraries: List[str] = Field(default_factory=list)
@@ -46,6 +49,7 @@ class HatchCppLibrary(BaseModel):
 class HatchCppPlatform(BaseModel):
     cc: str
     cxx: str
+    ld: str
     platform: Platform
     toolchain: CompilerToolchain
 
@@ -54,6 +58,7 @@ class HatchCppPlatform(BaseModel):
         platform = environ.get("HATCH_CPP_PLATFORM", sys_platform)
         CC = environ.get("CC", PlatformDefaults[platform]["CC"])
         CXX = environ.get("CXX", PlatformDefaults[platform]["CXX"])
+        LD = environ.get("LD", PlatformDefaults[platform]["LD"])
         if "gcc" in CC and "g++" in CXX:
             toolchain = "gcc"
         elif "clang" in CC and "clang++" in CXX:
@@ -62,34 +67,35 @@ class HatchCppPlatform(BaseModel):
             toolchain = "msvc"
         else:
             raise Exception(f"Unrecognized toolchain: {CC}, {CXX}")
-        return HatchCppPlatform(cc=CC, cxx=CXX, platform=platform, toolchain=toolchain)
 
-    def get_compile_flags(self, library: HatchCppLibrary) -> str:
+        # Customizations
+        if which("ccache") and not environ.get("HATCH_CPP_DISABLE_CCACHE"):
+            CC = f"ccache {CC}"
+            CXX = f"ccache {CXX}"
+
+        # https://github.com/rui314/mold/issues/647
+        # if which("ld.mold"):
+        #     LD = which("ld.mold")
+        # elif which("ld.lld"):
+        #     LD = which("ld.lld")
+        return HatchCppPlatform(cc=CC, cxx=CXX, ld=LD, platform=platform, toolchain=toolchain)
+
+    def get_compile_flags(self, library: HatchCppLibrary, build_type: BuildType = "release") -> str:
         flags = ""
         if self.toolchain == "gcc":
             flags = f"-I{get_path('include')}"
             flags += " " + " ".join(f"-I{d}" for d in library.include_dirs)
-            flags += " -fPIC -shared"
+            flags += " -fPIC"
             flags += " " + " ".join(library.extra_compile_args)
-            flags += " " + " ".join(library.extra_link_args)
-            flags += " " + " ".join(library.extra_objects)
-            flags += " " + " ".join(f"-l{lib}" for lib in library.libraries)
-            flags += " " + " ".join(f"-L{lib}" for lib in library.library_dirs)
             flags += " " + " ".join(f"-D{macro}" for macro in library.define_macros)
             flags += " " + " ".join(f"-U{macro}" for macro in library.undef_macros)
-            flags += f" -o {library.name}.so"
         elif self.toolchain == "clang":
             flags = f"-I{get_path('include')} "
             flags += " ".join(f"-I{d}" for d in library.include_dirs)
-            flags += " -undefined dynamic_lookup -fPIC -shared"
+            flags += " -fPIC"
             flags += " " + " ".join(library.extra_compile_args)
-            flags += " " + " ".join(library.extra_link_args)
-            flags += " " + " ".join(library.extra_objects)
-            flags += " " + " ".join(f"-l{lib}" for lib in library.libraries)
-            flags += " " + " ".join(f"-L{lib}" for lib in library.library_dirs)
             flags += " " + " ".join(f"-D{macro}" for macro in library.define_macros)
             flags += " " + " ".join(f"-U{macro}" for macro in library.undef_macros)
-            flags += f" -o {library.name}.so"
         elif self.toolchain == "msvc":
             flags = f"/I{get_path('include')} "
             flags += " ".join(f"/I{d}" for d in library.include_dirs)
@@ -98,7 +104,44 @@ class HatchCppPlatform(BaseModel):
             flags += " " + " ".join(library.extra_objects)
             flags += " " + " ".join(f"/D{macro}" for macro in library.define_macros)
             flags += " " + " ".join(f"/U{macro}" for macro in library.undef_macros)
-            flags += " /EHsc /DWIN32 /LD"
+            flags += " /EHsc /DWIN32"
+        # clean
+        while flags.count("  "):
+            flags = flags.replace("  ", " ")
+        return flags
+
+    def get_link_flags(self, library: HatchCppLibrary, build_type: BuildType = "release") -> str:
+        flags = ""
+        if self.toolchain == "gcc":
+            flags += " -shared"
+            flags += " " + " ".join(library.extra_link_args)
+            flags += " " + " ".join(library.extra_objects)
+            flags += " " + " ".join(f"-l{lib}" for lib in library.libraries)
+            flags += " " + " ".join(f"-L{lib}" for lib in library.library_dirs)
+            flags += f" -o {library.name}.so"
+            if self.platform == "darwin":
+                flags += " -undefined dynamic_lookup"
+            if "mold" in self.ld:
+                flags += f" -fuse-ld={self.ld}"
+            elif "lld" in self.ld:
+                flags += " -fuse-ld=lld"
+        elif self.toolchain == "clang":
+            flags += " -shared"
+            flags += " " + " ".join(library.extra_link_args)
+            flags += " " + " ".join(library.extra_objects)
+            flags += " " + " ".join(f"-l{lib}" for lib in library.libraries)
+            flags += " " + " ".join(f"-L{lib}" for lib in library.library_dirs)
+            flags += f" -o {library.name}.so"
+            if self.platform == "darwin":
+                flags += " -undefined dynamic_lookup"
+            if "mold" in self.ld:
+                flags += f" -fuse-ld={self.ld}"
+            elif "lld" in self.ld:
+                flags += " -fuse-ld=lld"
+        elif self.toolchain == "msvc":
+            flags += " " + " ".join(library.extra_link_args)
+            flags += " " + " ".join(library.extra_objects)
+            flags += " /LD"
             flags += f" /Fo:{library.name}.obj"
             flags += f" /Fe:{library.name}.pyd"
             flags += " /link /DLL"
@@ -111,13 +154,9 @@ class HatchCppPlatform(BaseModel):
             flags = flags.replace("  ", " ")
         return flags
 
-    def get_link_flags(self, library: HatchCppLibrary) -> str:
-        # TODO
-        flags = ""
-        return flags
-
 
 class HatchCppBuildPlan(BaseModel):
+    build_type: BuildType = "release"
     libraries: List[HatchCppLibrary] = Field(default_factory=list)
     platform: HatchCppPlatform = Field(default_factory=HatchCppPlatform.default)
     commands: List[str] = Field(default_factory=list)
@@ -125,8 +164,11 @@ class HatchCppBuildPlan(BaseModel):
     def generate(self):
         self.commands = []
         for library in self.libraries:
-            flags = self.platform.get_compile_flags(library)
-            self.commands.append(f"{self.platform.cc} {' '.join(library.sources)} {flags}")
+            compile_flags = self.platform.get_compile_flags(library, self.build_type)
+            link_flags = self.platform.get_link_flags(library, self.build_type)
+            self.commands.append(
+                f"{self.platform.cc if library.language == 'c' else self.platform.cxx} {' '.join(library.sources)} {compile_flags} {link_flags}"
+            )
         return self.commands
 
     def execute(self):
@@ -148,9 +190,3 @@ class HatchCppBuildConfig(BaseModel):
     verbose: Optional[bool] = Field(default=False)
     libraries: List[HatchCppLibrary] = Field(default_factory=list)
     platform: Optional[HatchCppPlatform] = Field(default_factory=HatchCppPlatform.default)
-
-    # build_function: str | None = None
-    # build_kwargs: t.Mapping[str, str] = field(default_factory=dict)
-    # editable_build_kwargs: t.Mapping[str, str] = field(default_factory=dict)
-    # ensured_targets: list[str] = field(default_factory=list)
-    # skip_if_exists: list[str] = field(default_factory=list)
