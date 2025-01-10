@@ -19,6 +19,7 @@ __all__ = (
 BuildType = Literal["debug", "release"]
 CompilerToolchain = Literal["gcc", "clang", "msvc"]
 Language = Literal["c", "c++"]
+Binding = Literal["cpython", "pybind11", "nanobind"]
 Platform = Literal["linux", "darwin", "win32"]
 PlatformDefaults = {
     "linux": {"CC": "gcc", "CXX": "g++", "LD": "ld"},
@@ -33,12 +34,18 @@ class HatchCppLibrary(BaseModel):
     name: str
     sources: List[str]
     language: Language = "c++"
+
+    binding: Binding = "cpython"
+    std: Optional[str] = None
+
     include_dirs: List[str] = Field(default_factory=list, alias="include-dirs")
     library_dirs: List[str] = Field(default_factory=list, alias="library-dirs")
     libraries: List[str] = Field(default_factory=list)
+
     extra_compile_args: List[str] = Field(default_factory=list, alias="extra-compile-args")
     extra_link_args: List[str] = Field(default_factory=list, alias="extra-link-args")
     extra_objects: List[str] = Field(default_factory=list, alias="extra-objects")
+
     define_macros: List[str] = Field(default_factory=list, alias="define-macros")
     undef_macros: List[str] = Field(default_factory=list, alias="undef-macros")
 
@@ -82,22 +89,42 @@ class HatchCppPlatform(BaseModel):
 
     def get_compile_flags(self, library: HatchCppLibrary, build_type: BuildType = "release") -> str:
         flags = ""
+
+        # Python.h
+        library.include_dirs.append(get_path("include"))
+
+        if library.binding == "pybind11":
+            import pybind11
+
+            library.include_dirs.append(pybind11.get_include())
+            if not library.std:
+                library.std = "c++11"
+        elif library.binding == "nanobind":
+            import nanobind
+
+            library.include_dirs.append(nanobind.include_dir())
+            if not library.std:
+                library.std = "c++17"
+            library.sources.append(str(Path(nanobind.include_dir()).parent / "src" / "nb_combined.cpp"))
+            library.include_dirs.append(str((Path(nanobind.include_dir()).parent / "ext" / "robin_map" / "include")))
+
         if self.toolchain == "gcc":
-            flags = f"-I{get_path('include')}"
             flags += " " + " ".join(f"-I{d}" for d in library.include_dirs)
             flags += " -fPIC"
             flags += " " + " ".join(library.extra_compile_args)
             flags += " " + " ".join(f"-D{macro}" for macro in library.define_macros)
             flags += " " + " ".join(f"-U{macro}" for macro in library.undef_macros)
+            if library.std:
+                flags += f" -std={library.std}"
         elif self.toolchain == "clang":
-            flags = f"-I{get_path('include')} "
             flags += " ".join(f"-I{d}" for d in library.include_dirs)
             flags += " -fPIC"
             flags += " " + " ".join(library.extra_compile_args)
             flags += " " + " ".join(f"-D{macro}" for macro in library.define_macros)
             flags += " " + " ".join(f"-U{macro}" for macro in library.undef_macros)
+            if library.std:
+                flags += f" -std={library.std}"
         elif self.toolchain == "msvc":
-            flags = f"/I{get_path('include')} "
             flags += " ".join(f"/I{d}" for d in library.include_dirs)
             flags += " " + " ".join(library.extra_compile_args)
             flags += " " + " ".join(library.extra_link_args)
@@ -105,6 +132,8 @@ class HatchCppPlatform(BaseModel):
             flags += " " + " ".join(f"/D{macro}" for macro in library.define_macros)
             flags += " " + " ".join(f"/U{macro}" for macro in library.undef_macros)
             flags += " /EHsc /DWIN32"
+            if library.std:
+                flags += f" /std:{library.std}"
         # clean
         while flags.count("  "):
             flags = flags.replace("  ", " ")
@@ -142,7 +171,6 @@ class HatchCppPlatform(BaseModel):
             flags += " " + " ".join(library.extra_link_args)
             flags += " " + " ".join(library.extra_objects)
             flags += " /LD"
-            flags += f" /Fo:{library.name}.obj"
             flags += f" /Fe:{library.name}.pyd"
             flags += " /link /DLL"
             if (Path(executable).parent / "libs").exists():
@@ -178,10 +206,8 @@ class HatchCppBuildPlan(BaseModel):
 
     def cleanup(self):
         if self.platform.platform == "win32":
-            for library in self.libraries:
-                temp_obj = Path(f"{library.name}.obj")
-                if temp_obj.exists():
-                    temp_obj.unlink()
+            for temp_obj in Path(".").glob("*.obj"):
+                temp_obj.unlink()
 
 
 class HatchCppBuildConfig(BaseModel):

@@ -29,9 +29,7 @@ packages = ["project"]
 packages = ["project"]
 
 [tool.hatch.build.hooks.hatch-cpp]
-build-config-class = "hatch_cpp.HatchCppBuildConfig"
-build-plan-class = "hatch_cpp.HatchCppBuildPlan"
 verbose = true
 libraries = [
-    {name = "project/extension", sources = ["cpp/project/basic.cpp"], include-dirs = ["cpp"]}
+    {name = "project/extension", sources = ["cpp/project/basic.cpp"], include-dirs = ["cpp"], binding = "nanobind"},
 ]

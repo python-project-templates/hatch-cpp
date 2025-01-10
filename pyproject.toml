@@ -45,6 +45,8 @@ develop = [
     "twine",
     "wheel",
     # test
+    "nanobind",
+    "pybind11",
     "pytest",
     "pytest-cov",
 ]

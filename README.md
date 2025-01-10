@@ -14,7 +14,7 @@ A simple, extensible C++ build plugin for [hatch](https://hatch.pypa.io/latest/)
 ```toml
 [tool.hatch.build.hooks.hatch-cpp]
 libraries = [
-    {name = "basic_project/extension", sources = ["cpp/basic-project/basic.cpp"], include-dirs = ["cpp"]}
+    {name = "project/extension", sources = ["cpp/project/basic.cpp"], include-dirs = ["cpp"]}
 ]
 ```
 
