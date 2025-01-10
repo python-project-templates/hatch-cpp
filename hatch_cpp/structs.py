@@ -112,6 +112,7 @@ class HatchCppPlatform(BaseModel):
         return flags
 
     def get_link_flags(self, library: HatchCppLibrary) -> str:
+        # TODO
         flags = ""
         return flags
 
@@ -144,10 +145,10 @@ class HatchCppBuildPlan(BaseModel):
 class HatchCppBuildConfig(BaseModel):
     """Build config values for Hatch C++ Builder."""
 
-    toolchain: Optional[str] = Field(default="raw")
-    libraries: List[HatchCppLibrary] = Field(default_factory=list)
     verbose: Optional[bool] = Field(default=False)
+    libraries: List[HatchCppLibrary] = Field(default_factory=list)
     platform: Optional[HatchCppPlatform] = Field(default_factory=HatchCppPlatform.default)
+
     # build_function: str | None = None
     # build_kwargs: t.Mapping[str, str] = field(default_factory=dict)
     # editable_build_kwargs: t.Mapping[str, str] = field(default_factory=dict)
