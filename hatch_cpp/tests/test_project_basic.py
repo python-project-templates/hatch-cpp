@@ -1,7 +1,8 @@
 from os import listdir
+from pathlib import Path
 from shutil import rmtree
 from subprocess import check_output
-from sys import platform
+from sys import path, platform
 
 
 class TestProject:
@@ -20,3 +21,8 @@ class TestProject:
             assert "extension.pyd" in listdir("hatch_cpp/tests/test_project_basic/basic_project")
         else:
             assert "extension.so" in listdir("hatch_cpp/tests/test_project_basic/basic_project")
+        here = Path(__file__).parent / "test_project_basic"
+        path.insert(0, str(here))
+        import basic_project.extension
+
+        assert basic_project.extension.hello() == "A string"

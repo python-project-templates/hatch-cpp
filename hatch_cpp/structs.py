@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from os import environ, system
-from sys import platform as sys_platform
+from pathlib import Path
+from sys import executable, platform as sys_platform
 from sysconfig import get_path
 from typing import Literal
 
@@ -80,7 +81,7 @@ class HatchCppPlatform(object):
             raise Exception(f"Unrecognized toolchain: {CC}, {CXX}")
         return HatchCppPlatform(cc=CC, cxx=CXX, platform=platform, toolchain=toolchain)
 
-    def get_flags(self, library: HatchCppLibrary) -> str:
+    def get_compile_flags(self, library: HatchCppLibrary) -> str:
         flags = ""
         if self.toolchain == "gcc":
             flags = f"-I{get_path('include')}"
@@ -109,18 +110,26 @@ class HatchCppPlatform(object):
         elif self.toolchain == "msvc":
             flags = f"/I{get_path('include')} "
             flags += " ".join(f"/I{d}" for d in library.include_dirs)
-            flags += " /LD"
             flags += " " + " ".join(library.extra_compile_args)
             flags += " " + " ".join(library.extra_link_args)
             flags += " " + " ".join(library.extra_objects)
-            flags += " " + " ".join(f"{lib}.lib" for lib in library.libraries)
-            flags += " " + " ".join(f"/LIBPATH:{lib}" for lib in library.library_dirs)
             flags += " " + " ".join(f"/D{macro}" for macro in library.define_macros)
             flags += " " + " ".join(f"/U{macro}" for macro in library.undef_macros)
-            flags += f" /Fo{library.name}.pyd"
+            flags += " /EHsc /DWIN32 /LD"
+            flags += f" /Fo:{library.name}.obj"
+            flags += f" /Fe:{library.name}.pyd"
+            flags += " /link /DLL"
+            if (Path(executable).parent / "libs").exists():
+                flags += f" /LIBPATH:{str(Path(executable).parent / 'libs')}"
+            flags += " " + " ".join(f"{lib}.lib" for lib in library.libraries)
+            flags += " " + " ".join(f"/LIBPATH:{lib}" for lib in library.library_dirs)
         # clean
         while flags.count("  "):
             flags = flags.replace("  ", " ")
+        return flags
+
+    def get_link_flags(self, library: HatchCppLibrary) -> str:
+        flags = ""
         return flags
 
 
@@ -133,7 +142,7 @@ class HatchCppBuildPlan(object):
     def generate(self):
         self.commands = []
         for library in self.libraries:
-            flags = self.platform.get_flags(library)
+            flags = self.platform.get_compile_flags(library)
             self.commands.append(f"{self.platform.cc} {' '.join(library.sources)} {flags}")
         return self.commands
 
@@ -141,3 +150,10 @@ class HatchCppBuildPlan(object):
         for command in self.commands:
             system(command)
         return self.commands
+
+    def cleanup(self):
+        if self.platform.platform == "win32":
+            for library in self.libraries:
+                temp_obj = Path(f"{library.name}.obj")
+                if temp_obj.exists():
+                    temp_obj.unlink()
