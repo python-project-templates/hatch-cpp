@@ -4,14 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hatch-cpp"
+authors = [{name = "the hatch-cpp authors", email = "t.paine154@gmail.com"}]
 description = "Hatch plugin for C++ builds"
-version = "0.1.0"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = { text = "Apache-2.0" }
+version = "0.1.0"
 requires-python = ">=3.9"
-authors = [
-    { name = "Tim Paine", email = "t.paine154@gmail.com" },
-]
 keywords = [
     "hatch",
     "python",
@@ -23,6 +21,8 @@ keywords = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -39,6 +39,7 @@ dependencies = [
 develop = [
     "build",
     "bump-my-version",
+    "check-manifest",
     "ruff>=0.3,<0.9",
     "twine",
     "wheel",
@@ -72,6 +73,28 @@ filename = "pyproject.toml"
 search = 'version = "{current_version}"'
 replace = 'version = "{new_version}"'
 
+[tool.check-manifest]
+ignore = [
+    ".copier-answers.yml",
+    "Makefile",
+    "setup.py",
+    "docs/**/*",
+]
+
+[tool.coverage.run]
+branch = false
+omit = [
+    "hatch_cpp/tests/integration/",
+]
+[tool.coverage.report]
+exclude_also = [
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@(abc\\.)?abstractmethod",
+]
+ignore_errors = true
+fail_under = 75
+
 [tool.hatch.build]
 artifacts = []
 
@@ -79,31 +102,13 @@ artifacts = []
 src = "/"
 
 [tool.hatch.build.targets.sdist]
-include = [
-    "/hatch_cpp",
-    "LICENSE",
-    "README.md",
-]
-exclude = [
-    ".copier-answers.yml",
-    "/.github",
-    "/.gitignore",
-]
+packages = ["hatch_cpp"]
 
 [tool.hatch.build.targets.wheel]
-include = [
-    "/hatch_cpp",
-]
-exclude = [
-    ".copier-answers.yml",
-    "/.github",
-    "/.gitignore",
-    "/pyproject.toml",
-]
-
-[tool.hatch.build.targets.wheel.shared-data]
+packages = ["hatch_cpp"]
 
 [tool.pytest.ini_options]
+addopts = ["-vvv", "--junitxml=junit.xml"]
 asyncio_mode = "strict"
 testpaths = "hatch_cpp/tests"
 
