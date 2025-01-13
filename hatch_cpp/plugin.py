@@ -83,8 +83,5 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
 
         # force include libraries
         for library in libraries:
-            if build_plan.platform.platform == "win32":
-                suffix = "dll"
-            else:
-                suffix = "so"
-            build_data["force_include"][f"{library.name}.{suffix}"] = f"{library.name}.{suffix}"
+            name = library.get_qualified_name(build_plan.platform.platform)
+            build_data["force_include"][name] = name
