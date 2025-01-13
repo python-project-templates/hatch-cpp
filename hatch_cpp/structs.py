@@ -52,6 +52,15 @@ class HatchCppLibrary(BaseModel):
     export_symbols: List[str] = Field(default_factory=list, alias="export-symbols")
     depends: List[str] = Field(default_factory=list)
 
+    def get_qualified_name(self, platform):
+        if platform == "win32":
+            suffix = "dll" if self.binding == "none" else "pyd"
+        elif platform == "darwin" and self.binding == "none":
+            suffix = "dylib"
+        else:
+            suffix = "so"
+        return f"{self.name}.{suffix}"
+
 
 class HatchCppPlatform(BaseModel):
     cc: str
