@@ -80,3 +80,11 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
 
         # Perform any cleanup actions
         build_plan.cleanup()
+
+        # force include libraries
+        for library in libraries:
+            if build_plan.platform.platform == "win32":
+                suffix = "dll"
+            else:
+                suffix = "so"
+            build_data["force_include"][f"{library.name}.{suffix}"] = f"{library.name}.{suffix}"
