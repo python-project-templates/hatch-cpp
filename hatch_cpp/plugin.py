@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
+import platform as sysplatform
+import sys
 import typing as t
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
@@ -18,7 +20,7 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
     PLUGIN_NAME = "hatch-cpp"
     _logger = logging.getLogger(__name__)
 
-    def initialize(self, version: str, _: dict[str, t.Any]) -> None:
+    def initialize(self, version: str, build_data: dict[str, t.Any]) -> None:
         """Initialize the plugin."""
         # Log some basic information
         self._logger.info("Initializing hatch-cpp plugin version %s", version)
@@ -29,6 +31,19 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
         if self.target_name != "wheel":
             self._logger.info("ignoring target name %s", self.target_name)
             return
+
+        build_data["pure_python"] = False
+        machine = sysplatform.machine()
+        version_major = sys.version_info.major
+        version_minor = sys.version_info.minor
+        # TODO abi3
+        if "darwin" in sys.platform:
+            os_name = "macosx_11_0"
+        elif "linux" in sys.platform:
+            os_name = "linux"
+        else:
+            os_name = "win"
+        build_data["tag"] = f"cp{version_major}{version_minor}-cp{version_major}{version_minor}-{os_name}_{machine}"
 
         # Skip if SKIP_HATCH_CPP is set
         # TODO: Support CLI once https://github.com/pypa/hatch/pull/1743
