@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from os import environ, system
+from os import environ, system as system_call
 from pathlib import Path
 from re import match
 from shutil import which
-from sys import executable, platform as sys_platform
+from sys import executable, platform as sys_platform, version_info
 from sysconfig import get_path
-from typing import Any, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
@@ -20,7 +20,7 @@ __all__ = (
 BuildType = Literal["debug", "release"]
 CompilerToolchain = Literal["gcc", "clang", "msvc"]
 Language = Literal["c", "c++"]
-Binding = Literal["cpython", "pybind11", "nanobind"]
+Binding = Literal["cpython", "pybind11", "nanobind", "generic"]
 Platform = Literal["linux", "darwin", "win32"]
 PlatformDefaults = {
     "linux": {"CC": "gcc", "CXX": "g++", "LD": "ld"},
@@ -65,9 +65,9 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
 
     def get_qualified_name(self, platform):
         if platform == "win32":
-            suffix = "dll" if self.binding == "none" else "pyd"
+            suffix = "dll" if self.binding == "generic" else "pyd"
         elif platform == "darwin":
-            suffix = "dylib" if self.binding == "none" else "so"
+            suffix = "dylib" if self.binding == "generic" else "so"
         else:
             suffix = "so"
         if self.py_limited_api and platform != "win32":
@@ -78,6 +78,8 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
     def check_binding_and_py_limited_api(self):
         if self.binding == "pybind11" and self.py_limited_api:
             raise ValueError("pybind11 does not support Py_LIMITED_API")
+        if self.binding == "generic" and self.py_limited_api:
+            raise ValueError("Generic binding can not support Py_LIMITED_API")
         return self
 
 
@@ -119,7 +121,8 @@ class HatchCppPlatform(BaseModel):
         flags = ""
 
         # Python.h
-        library.include_dirs.append(get_path("include"))
+        if library.binding != "generic":
+            library.include_dirs.append(get_path("include"))
 
         if library.binding == "pybind11":
             import pybind11
@@ -217,36 +220,100 @@ class HatchCppPlatform(BaseModel):
         return flags
 
 
-class HatchCppBuildPlan(BaseModel):
-    build_type: BuildType = "release"
-    libraries: List[HatchCppLibrary] = Field(default_factory=list)
-    platform: HatchCppPlatform = Field(default_factory=HatchCppPlatform.default)
-    commands: List[str] = Field(default_factory=list)
+class HatchCppCmakeConfiguration(BaseModel):
+    root: Path
+    build: Path = Field(default_factory=lambda: Path("build"))
+    install: Optional[Path] = Field(default=None)
 
-    def generate(self):
-        self.commands = []
-        for library in self.libraries:
-            compile_flags = self.platform.get_compile_flags(library, self.build_type)
-            link_flags = self.platform.get_link_flags(library, self.build_type)
-            self.commands.append(
-                f"{self.platform.cc if library.language == 'c' else self.platform.cxx} {' '.join(library.sources)} {compile_flags} {link_flags}"
-            )
-        return self.commands
+    cmake_arg_prefix: Optional[str] = Field(default=None)
+    cmake_args: Dict[str, str] = Field(default_factory=dict)
+    cmake_env_args: Dict[Platform, Dict[str, str]] = Field(default_factory=dict)
 
-    def execute(self):
-        for command in self.commands:
-            system(command)
-        return self.commands
-
-    def cleanup(self):
-        if self.platform.platform == "win32":
-            for temp_obj in Path(".").glob("*.obj"):
-                temp_obj.unlink()
+    include_flags: Optional[Dict[str, Any]] = Field(default=None)
 
 
 class HatchCppBuildConfig(BaseModel):
     """Build config values for Hatch C++ Builder."""
 
     verbose: Optional[bool] = Field(default=False)
+    name: Optional[str] = Field(default=None)
     libraries: List[HatchCppLibrary] = Field(default_factory=list)
+    cmake: Optional[HatchCppCmakeConfiguration] = Field(default=None)
     platform: Optional[HatchCppPlatform] = Field(default_factory=HatchCppPlatform.default)
+
+    @model_validator(mode="after")
+    def check_toolchain_matches_args(self):
+        if self.cmake and self.libraries:
+            raise ValueError("Must not provide libraries when using cmake toolchain.")
+        return self
+
+
+class HatchCppBuildPlan(HatchCppBuildConfig):
+    build_type: BuildType = "release"
+    commands: List[str] = Field(default_factory=list)
+
+    def generate(self):
+        self.commands = []
+        if self.libraries:
+            for library in self.libraries:
+                compile_flags = self.platform.get_compile_flags(library, self.build_type)
+                link_flags = self.platform.get_link_flags(library, self.build_type)
+                self.commands.append(
+                    f"{self.platform.cc if library.language == 'c' else self.platform.cxx} {' '.join(library.sources)} {compile_flags} {link_flags}"
+                )
+        elif self.cmake:
+            # Derive prefix
+            if self.cmake.cmake_arg_prefix is None:
+                self.cmake.cmake_arg_prefix = f"{self.name.replace('.', '_').replace('-', '_').upper()}_"
+
+            # Append base command
+            self.commands.append(f"cmake {Path(self.cmake.root).parent} -DCMAKE_BUILD_TYPE={self.build_type} -B {self.cmake.build}")
+
+            # Setup install path
+            if self.cmake.install:
+                self.commands[-1] += f" -DCMAKE_INSTALL_PREFIX={self.cmake.install}"
+            else:
+                self.commands[-1] += f" -DCMAKE_INSTALL_PREFIX={Path(self.cmake.root).parent}"
+
+            # TODO: CMAKE_CXX_COMPILER
+            if self.platform.platform == "win32":
+                # TODO: prefix?
+                self.commands[-1] += f' -G "{environ.get("GENERATOR", "Visual Studio 17 2022")}"'
+
+            # Put in CMake flags
+            args = self.cmake.cmake_args.copy()
+            for platform, env_args in self.cmake.cmake_env_args.items():
+                if platform == self.platform.platform:
+                    for key, value in env_args.items():
+                        args[key] = value
+            for key, value in args.items():
+                self.commands[-1] += f" -D{self.cmake.cmake_arg_prefix}{key.upper()}={value}"
+
+            # Include customs
+            if self.cmake.include_flags:
+                if self.cmake.include_flags.get("python_version", False):
+                    self.commands[-1] += f" -D{self.cmake.cmake_arg_prefix}PYTHON_VERSION={version_info.major}.{version_info.minor}"
+                if self.cmake.include_flags.get("manylinux", False) and self.platform.platform == "linux":
+                    self.commands[-1] += f" -D{self.cmake.cmake_arg_prefix}MANYLINUX=ON"
+
+            # Include mac deployment target
+            if self.platform.platform == "darwin":
+                self.commands[-1] += f" -DCMAKE_OSX_DEPLOYMENT_TARGET={environ.get('OSX_DEPLOYMENT_TARGET', '11')}"
+
+            # Append build command
+            self.commands.append(f"cmake --build {self.cmake.build} --config {self.build_type}")
+
+            # Append install command
+            self.commands.append(f"cmake --install {self.cmake.build} --config {self.build_type}")
+
+        return self.commands
+
+    def execute(self):
+        for command in self.commands:
+            system_call(command)
+        return self.commands
+
+    def cleanup(self):
+        if self.platform.platform == "win32":
+            for temp_obj in Path(".").glob("*.obj"):
+                temp_obj.unlink()
