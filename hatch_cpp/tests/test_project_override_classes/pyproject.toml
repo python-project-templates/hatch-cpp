@@ -3,7 +3,7 @@ requires = ["hatchling>=1.20"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hatch-cpp-test-project-basic"
+name = "hatch-cpp-test-project-override-classes"
 description = "Basic test project for hatch-cpp"
 version = "0.1.0"
 requires-python = ">=3.9"

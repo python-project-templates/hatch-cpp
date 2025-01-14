@@ -32,19 +32,6 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
             self._logger.info("ignoring target name %s", self.target_name)
             return
 
-        build_data["pure_python"] = False
-        machine = sysplatform.machine()
-        version_major = sys.version_info.major
-        version_minor = sys.version_info.minor
-        # TODO abi3
-        if "darwin" in sys.platform:
-            os_name = "macosx_11_0"
-        elif "linux" in sys.platform:
-            os_name = "linux"
-        else:
-            os_name = "win"
-        build_data["tag"] = f"cp{version_major}{version_minor}-cp{version_major}{version_minor}-{os_name}_{machine}"
-
         # Skip if SKIP_HATCH_CPP is set
         # TODO: Support CLI once https://github.com/pypa/hatch/pull/1743
         if os.getenv("SKIP_HATCH_CPP"):
@@ -85,3 +72,20 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
         for library in libraries:
             name = library.get_qualified_name(build_plan.platform.platform)
             build_data["force_include"][name] = name
+
+        if libraries:
+            build_data["pure_python"] = False
+            machine = sysplatform.machine()
+            version_major = sys.version_info.major
+            version_minor = sys.version_info.minor
+            # TODO abi3
+            if "darwin" in sys.platform:
+                os_name = "macosx_11_0"
+            elif "linux" in sys.platform:
+                os_name = "linux"
+            else:
+                os_name = "win"
+            if all([lib.py_limited_api for lib in libraries]):
+                build_data["tag"] = f"cp{version_major}{version_minor}-abi3-{os_name}_{machine}"
+            else:
+                build_data["tag"] = f"cp{version_major}{version_minor}-cp{version_major}{version_minor}-{os_name}_{machine}"
