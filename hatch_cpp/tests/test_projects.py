@@ -9,7 +9,15 @@ import pytest
 
 class TestProject:
     @pytest.mark.parametrize(
-        "project", ["test_project_basic", "test_project_override_classes", "test_project_pybind", "test_project_nanobind", "test_project_limited_api"]
+        "project",
+        [
+            "test_project_basic",
+            "test_project_override_classes",
+            "test_project_pybind",
+            "test_project_nanobind",
+            "test_project_limited_api",
+            "test_project_cmake",
+        ],
     )
     def test_basic(self, project):
         # cleanup

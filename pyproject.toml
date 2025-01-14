@@ -49,6 +49,7 @@ develop = [
     "pybind11",
     "pytest",
     "pytest-cov",
+    "toml",
 ]
 
 [project.entry-points.hatch]
