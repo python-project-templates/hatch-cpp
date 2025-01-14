@@ -8,7 +8,9 @@ import pytest
 
 
 class TestProject:
-    @pytest.mark.parametrize("project", ["test_project_basic", "test_project_override_classes", "test_project_pybind", "test_project_nanobind"])
+    @pytest.mark.parametrize(
+        "project", ["test_project_basic", "test_project_override_classes", "test_project_pybind", "test_project_nanobind", "test_project_limited_api"]
+    )
     def test_basic(self, project):
         # cleanup
         rmtree(f"hatch_cpp/tests/{project}/project/extension.so", ignore_errors=True)
@@ -28,10 +30,13 @@ class TestProject:
 
         # assert built
 
-        if platform == "win32":
-            assert "extension.pyd" in listdir(f"hatch_cpp/tests/{project}/project")
+        if project == "test_project_limited_api" and platform != "win32":
+            assert "extension.abi3.so" in listdir(f"hatch_cpp/tests/{project}/project")
         else:
-            assert "extension.so" in listdir(f"hatch_cpp/tests/{project}/project")
+            if platform == "win32":
+                assert "extension.pyd" in listdir(f"hatch_cpp/tests/{project}/project")
+            else:
+                assert "extension.so" in listdir(f"hatch_cpp/tests/{project}/project")
 
         # import
         here = Path(__file__).parent / project
