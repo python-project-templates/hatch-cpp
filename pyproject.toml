@@ -41,7 +41,7 @@ develop = [
     "build",
     "bump-my-version",
     "check-manifest",
-    "ruff>=0.3,<0.9",
+    "ruff>=0.3,<0.10",
     "twine",
     "wheel",
     # test
