@@ -3,4 +3,11 @@ docs/* linguist-documentation
 *.ipynb linguist-documentation
 Makefile linguist-documentation
 
+<<<<<<< before updating
 * text=auto eol=lf
+=======
+*.md text=auto eol=lf
+*.py text=auto eol=lf
+*.toml text=auto eol=lf
+*.yaml text=auto eol=lf
+>>>>>>> after updating

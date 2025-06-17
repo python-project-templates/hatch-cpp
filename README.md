@@ -2,7 +2,7 @@
 
 Hatch plugin for C++ builds
 
-[![Build Status](https://github.com/python-project-templates/hatch-cpp/actions/workflows/build.yml/badge.svg?branch=main&event=push)](https://github.com/python-project-templates/hatch-cpp/actions/workflows/build.yml)
+[![Build Status](https://github.com/python-project-templates/hatch-cpp/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/python-project-templates/hatch-cpp/actions/workflows/build.yaml)
 [![codecov](https://codecov.io/gh/python-project-templates/hatch-cpp/branch/main/graph/badge.svg)](https://codecov.io/gh/python-project-templates/hatch-cpp)
 [![License](https://img.shields.io/github/license/python-project-templates/hatch-cpp)](https://github.com/python-project-templates/hatch-cpp)
 [![PyPI](https://img.shields.io/pypi/v/hatch-cpp.svg)](https://pypi.python.org/pypi/hatch-cpp)
