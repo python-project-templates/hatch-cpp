@@ -42,7 +42,7 @@ develop = [
     "build",
     "bump-my-version",
     "check-manifest",
-    "ruff>=0.3,<0.12",
+    "ruff>=0.3,<0.13",
     "twine",
     "uv",
     "wheel",
