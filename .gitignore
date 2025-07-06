@@ -123,6 +123,14 @@ ENV/
 .Trashes
 .VolumeIcon.icns
 
+# Documentation
+/site
+index.md
+docs/_build/
+docs/src/_build/
+docs/api
+docs/index.md
+
 # Directories potentially created on remote AFP share
 .AppleDB
 .AppleDesktop
