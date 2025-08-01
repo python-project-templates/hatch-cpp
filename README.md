@@ -9,6 +9,7 @@ Hatch plugin for C++ builds
 
 ## Overview
 
+<<<<<<< before updating
 A simple, extensible C++ build plugin for [hatch](https://hatch.pypa.io/latest/).
 
 ```toml
@@ -31,5 +32,7 @@ For more complete systems, see:
 |`HATCH_CPP_PLATFORM`| | |
 |`HATCH_CPP_DISABLE_CCACHE`| | |
 
+=======
+>>>>>>> after updating
 > [!NOTE]
 > This library was generated using [copier](https://copier.readthedocs.io/en/stable/) from the [Base Python Project Template repository](https://github.com/python-project-templates/base).

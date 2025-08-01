@@ -42,7 +42,17 @@ develop = [
     "build",
     "bump-my-version",
     "check-manifest",
+<<<<<<< before updating
     "ruff>=0.3,<0.13",
+=======
+    "codespell>=2.4,<2.5",
+    "hatchling",
+    "mdformat>=0.7.22,<0.8",
+    "mdformat-tables>=1",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+>>>>>>> after updating
     "twine",
     "uv",
     "wheel",
@@ -67,7 +77,12 @@ Homepage = "https://github.com/python-project-templates/hatch-cpp"
 [tool.bumpversion]
 current_version = "0.1.7"
 commit = true
+<<<<<<< before updating
 tag = false
+=======
+tag = true
+commit_args = "-s"
+>>>>>>> after updating
 
 [[tool.bumpversion.files]]
 filename = "hatch_cpp/__init__.py"
