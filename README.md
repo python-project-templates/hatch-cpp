@@ -19,17 +19,19 @@ libraries = [
 ```
 
 For more complete systems, see:
+
 - [scikit-build-core](https://github.com/scikit-build/scikit-build-core)
 - [setuptools](https://setuptools.pypa.io/en/latest/userguide/ext_modules.html)
 
 ## Environment Variables
-| Name | Default | Description |
-|:-----|:--------|:------------|
-|`CC`| | |
-|`CXX`| | |
-|`LD`| | |
-|`HATCH_CPP_PLATFORM`| | |
-|`HATCH_CPP_DISABLE_CCACHE`| | |
+
+| Name                       | Default | Description |
+| :------------------------- | :------ | :---------- |
+| `CC`                       |         |             |
+| `CXX`                      |         |             |
+| `LD`                       |         |             |
+| `HATCH_CPP_PLATFORM`       |         |             |
+| `HATCH_CPP_DISABLE_CCACHE` |         |             |
 
 > [!NOTE]
 > This library was generated using [copier](https://copier.readthedocs.io/en/stable/) from the [Base Python Project Template repository](https://github.com/python-project-templates/base).
