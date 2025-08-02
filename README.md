@@ -37,6 +37,9 @@ platform = { Platform, either "linux", "darwin", or "win32" }
 
 See the [test cases](./hatch_cpp/tests/) for more concrete examples.
 
+`hatch-cpp` is driven by [pydantic](https://docs.pydantic.dev/latest/) models for configuration and execution of the build.
+These models can themselves be overridden by setting `build-config-class` / `build-plan-class`.
+
 ### Library Arguments
 
 ```toml
