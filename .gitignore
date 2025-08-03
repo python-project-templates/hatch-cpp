@@ -144,15 +144,10 @@ hatch_cpp/extension
 # Jupyter
 .ipynb_checkpoints
 .autoversion
-<<<<<<< before updating
-python_template_js/nbextension
-python_template_js/labextension
-=======
 !hatch_cpp/extension/hatch_cpp.json
 !hatch_cpp/extension/install.json
 hatch_cpp/nbextension
 hatch_cpp/labextension
->>>>>>> after updating
 
 # Mac
 .DS_Store
