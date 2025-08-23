@@ -30,7 +30,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.11"]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
     - uses: actions/checkout@v5
@@ -59,7 +59,6 @@ jobs:
       with:
         name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
         path: junit.xml
-      if: ${{ always() }}
 
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
@@ -78,3 +77,4 @@ jobs:
       with:
         name: dist-${{matrix.os}}
         path: dist
+      if: ${{ matrix.python-version == '3.11' }}
