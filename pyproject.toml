@@ -54,7 +54,7 @@ develop = [
     "uv",
     "wheel",
     # test
-    "nanobind<2.9.0",  # https://github.com/wjakob/nanobind/commit/abd27e3b5565bc95f5091321f0f863fce8b5b95b
+    "nanobind<2.10.0",  # https://github.com/wjakob/nanobind/commit/abd27e3b5565bc95f5091321f0f863fce8b5b95b
     "pybind11",
     "pytest",
     "pytest-cov",
