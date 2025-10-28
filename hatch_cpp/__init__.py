@@ -1,4 +1,4 @@
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 
 from .hooks import hatch_register_build_hook
 from .plugin import HatchCppBuildHook

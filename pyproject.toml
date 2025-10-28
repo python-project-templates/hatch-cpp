@@ -8,7 +8,7 @@ authors = [{name = "the hatch-cpp authors", email = "t.paine154@gmail.com"}]
 description = "Hatch plugin for C++ builds"
 readme = "README.md"
 license = { text = "Apache-2.0" }
-version = "0.1.7"
+version = "0.1.8"
 requires-python = ">=3.9"
 keywords = [
     "hatch",
@@ -73,7 +73,7 @@ Repository = "https://github.com/python-project-templates/hatch-cpp"
 Homepage = "https://github.com/python-project-templates/hatch-cpp"
 
 [tool.bumpversion]
-current_version = "0.1.7"
+current_version = "0.1.8"
 commit = true
 tag = false
 commit_args = "-s"
