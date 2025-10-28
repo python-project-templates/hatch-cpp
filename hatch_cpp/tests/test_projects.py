@@ -13,6 +13,8 @@ class TestProject:
         [
             "test_project_basic",
             "test_project_override_classes",
+            "test_project_override_classes",
+            "test_project_override_toolchain",
             "test_project_pybind",
             "test_project_nanobind",
             "test_project_limited_api",
@@ -29,8 +31,7 @@ class TestProject:
         # compile
         check_call(
             [
-                "hatchling",
-                "build",
+                "hatch-build",
                 "--hooks-only",
             ],
             cwd=f"hatch_cpp/tests/{project}",

@@ -45,6 +45,7 @@ develop = [
     "check-manifest",
     "codespell>=2.4,<2.5",
     "hatchling",
+    "hatch-build",
     "mdformat>=0.7.22,<0.8",
     "mdformat-tables>=1",
     "pytest",
