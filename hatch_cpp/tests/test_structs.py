@@ -46,3 +46,11 @@ class TestStructs:
         assert f"-DHATCH_CPP_TEST_PROJECT_BASIC_PYTHON_VERSION=3.{version_info.minor}" in hatch_build_plan.commands[0]
         if hatch_build_plan.platform.platform == "darwin":
             assert "-DCMAKE_OSX_DEPLOYMENT_TARGET=11" in hatch_build_plan.commands[0]
+
+    def test_platform_toolchain_override(self):
+        txt = (Path(__file__).parent / "test_project_override_toolchain" / "pyproject.toml").read_text()
+        toml = loads(txt)
+        hatch_build_config = HatchCppBuildConfig(name=toml["project"]["name"], **toml["tool"]["hatch"]["build"]["hooks"]["hatch-cpp"])
+        assert "clang" in hatch_build_config.platform.cc
+        assert "clang++" in hatch_build_config.platform.cxx
+        assert hatch_build_config.platform.toolchain == "gcc"

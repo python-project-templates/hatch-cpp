@@ -102,8 +102,15 @@ class HatchCppPlatform(BaseModel):
             toolchain = "clang"
         elif "cl" in CC and "cl" in CXX:
             toolchain = "msvc"
+        # Fallback to platform defaults
+        elif platform == "linux":
+            toolchain = "gcc"
+        elif platform == "darwin":
+            toolchain = "clang"
+        elif platform == "win32":
+            toolchain = "msvc"
         else:
-            raise Exception(f"Unrecognized toolchain: {CC}, {CXX}")
+            toolchain = "gcc"
 
         # Customizations
         if which("ccache") and not environ.get("HATCH_CPP_DISABLE_CCACHE"):
@@ -116,6 +123,12 @@ class HatchCppPlatform(BaseModel):
         # elif which("ld.lld"):
         #     LD = which("ld.lld")
         return HatchCppPlatform(cc=CC, cxx=CXX, ld=LD, platform=platform, toolchain=toolchain)
+
+    @staticmethod
+    def platform_for_toolchain(toolchain: CompilerToolchain) -> HatchCppPlatform:
+        platform = HatchCppPlatform.default()
+        platform.toolchain = toolchain
+        return platform
 
     def get_compile_flags(self, library: HatchCppLibrary, build_type: BuildType = "release") -> str:
         flags = ""
@@ -241,11 +254,27 @@ class HatchCppBuildConfig(BaseModel):
     cmake: Optional[HatchCppCmakeConfiguration] = Field(default=None)
     platform: Optional[HatchCppPlatform] = Field(default_factory=HatchCppPlatform.default)
 
-    @model_validator(mode="after")
-    def check_toolchain_matches_args(self):
-        if self.cmake and self.libraries:
+    @model_validator(mode="wrap")
+    @classmethod
+    def validate_model(cls, data, handler):
+        if "toolchain" in data:
+            data["platform"] = HatchCppPlatform.platform_for_toolchain(data["toolchain"])
+            data.pop("toolchain")
+        elif "platform" not in data:
+            data["platform"] = HatchCppPlatform.default()
+        if "cc" in data:
+            data["platform"].cc = data["cc"]
+            data.pop("cc")
+        if "cxx" in data:
+            data["platform"].cxx = data["cxx"]
+            data.pop("cxx")
+        if "ld" in data:
+            data["platform"].ld = data["ld"]
+            data.pop("ld")
+        model = handler(data)
+        if model.cmake and model.libraries:
             raise ValueError("Must not provide libraries when using cmake toolchain.")
-        return self
+        return model
 
 
 class HatchCppBuildPlan(HatchCppBuildConfig):

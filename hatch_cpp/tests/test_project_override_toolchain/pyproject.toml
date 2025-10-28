@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling>=1.20"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hatch-cpp-test-project-toolchain"
+description = "Toolchain override test project for hatch-cpp"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "hatchling>=1.20",
+    "hatch-cpp",
+]
+
+[tool.hatch.build]
+artifacts = [
+    "project/*.dll",
+    "project/*.dylib",
+    "project/*.so",
+]
+
+[tool.hatch.build.sources]
+src = "/"
+
+[tool.hatch.build.targets.sdist]
+packages = ["project"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["project"]
+
+[tool.hatch.build.hooks.hatch-cpp]
+verbose = true
+libraries = [
+    {name = "project/extension", sources = ["cpp/project/basic.cpp"], include-dirs = ["cpp"]}
+]
+toolchain = "gcc"
+cc = "clang"
+cxx = "clang++"
