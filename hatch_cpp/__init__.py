@@ -1,5 +1,6 @@
 __version__ = "0.1.8"
 
-from .hooks import hatch_register_build_hook
-from .plugin import HatchCppBuildHook
-from .structs import *
+from .config import *
+from .hooks import *
+from .plugin import *
+from .toolchains import *

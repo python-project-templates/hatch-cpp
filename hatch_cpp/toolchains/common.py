@@ -1,21 +1,26 @@
 from __future__ import annotations
 
-from os import environ, system as system_call
+from os import environ
 from pathlib import Path
 from re import match
 from shutil import which
-from sys import executable, platform as sys_platform, version_info
+from sys import executable, platform as sys_platform
 from sysconfig import get_path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 __all__ = (
-    "HatchCppBuildConfig",
+    "BuildType",
+    "CompilerToolchain",
+    "Language",
+    "Binding",
+    "Platform",
+    "PlatformDefaults",
     "HatchCppLibrary",
     "HatchCppPlatform",
-    "HatchCppBuildPlan",
 )
+
 
 BuildType = Literal["debug", "release"]
 CompilerToolchain = Literal["gcc", "clang", "msvc"]
@@ -231,118 +236,3 @@ class HatchCppPlatform(BaseModel):
         while flags.count("  "):
             flags = flags.replace("  ", " ")
         return flags
-
-
-class HatchCppCmakeConfiguration(BaseModel):
-    root: Path
-    build: Path = Field(default_factory=lambda: Path("build"))
-    install: Optional[Path] = Field(default=None)
-
-    cmake_arg_prefix: Optional[str] = Field(default=None)
-    cmake_args: Dict[str, str] = Field(default_factory=dict)
-    cmake_env_args: Dict[Platform, Dict[str, str]] = Field(default_factory=dict)
-
-    include_flags: Optional[Dict[str, Any]] = Field(default=None)
-
-
-class HatchCppBuildConfig(BaseModel):
-    """Build config values for Hatch C++ Builder."""
-
-    verbose: Optional[bool] = Field(default=False)
-    name: Optional[str] = Field(default=None)
-    libraries: List[HatchCppLibrary] = Field(default_factory=list)
-    cmake: Optional[HatchCppCmakeConfiguration] = Field(default=None)
-    platform: Optional[HatchCppPlatform] = Field(default_factory=HatchCppPlatform.default)
-
-    @model_validator(mode="wrap")
-    @classmethod
-    def validate_model(cls, data, handler):
-        if "toolchain" in data:
-            data["platform"] = HatchCppPlatform.platform_for_toolchain(data["toolchain"])
-            data.pop("toolchain")
-        elif "platform" not in data:
-            data["platform"] = HatchCppPlatform.default()
-        if "cc" in data:
-            data["platform"].cc = data["cc"]
-            data.pop("cc")
-        if "cxx" in data:
-            data["platform"].cxx = data["cxx"]
-            data.pop("cxx")
-        if "ld" in data:
-            data["platform"].ld = data["ld"]
-            data.pop("ld")
-        model = handler(data)
-        if model.cmake and model.libraries:
-            raise ValueError("Must not provide libraries when using cmake toolchain.")
-        return model
-
-
-class HatchCppBuildPlan(HatchCppBuildConfig):
-    build_type: BuildType = "release"
-    commands: List[str] = Field(default_factory=list)
-
-    def generate(self):
-        self.commands = []
-        if self.libraries:
-            for library in self.libraries:
-                compile_flags = self.platform.get_compile_flags(library, self.build_type)
-                link_flags = self.platform.get_link_flags(library, self.build_type)
-                self.commands.append(
-                    f"{self.platform.cc if library.language == 'c' else self.platform.cxx} {' '.join(library.sources)} {compile_flags} {link_flags}"
-                )
-        elif self.cmake:
-            # Derive prefix
-            if self.cmake.cmake_arg_prefix is None:
-                self.cmake.cmake_arg_prefix = f"{self.name.replace('.', '_').replace('-', '_').upper()}_"
-
-            # Append base command
-            self.commands.append(f"cmake {Path(self.cmake.root).parent} -DCMAKE_BUILD_TYPE={self.build_type} -B {self.cmake.build}")
-
-            # Setup install path
-            if self.cmake.install:
-                self.commands[-1] += f" -DCMAKE_INSTALL_PREFIX={self.cmake.install}"
-            else:
-                self.commands[-1] += f" -DCMAKE_INSTALL_PREFIX={Path(self.cmake.root).parent}"
-
-            # TODO: CMAKE_CXX_COMPILER
-            if self.platform.platform == "win32":
-                # TODO: prefix?
-                self.commands[-1] += f' -G "{environ.get("GENERATOR", "Visual Studio 17 2022")}"'
-
-            # Put in CMake flags
-            args = self.cmake.cmake_args.copy()
-            for platform, env_args in self.cmake.cmake_env_args.items():
-                if platform == self.platform.platform:
-                    for key, value in env_args.items():
-                        args[key] = value
-            for key, value in args.items():
-                self.commands[-1] += f" -D{self.cmake.cmake_arg_prefix}{key.upper()}={value}"
-
-            # Include customs
-            if self.cmake.include_flags:
-                if self.cmake.include_flags.get("python_version", False):
-                    self.commands[-1] += f" -D{self.cmake.cmake_arg_prefix}PYTHON_VERSION={version_info.major}.{version_info.minor}"
-                if self.cmake.include_flags.get("manylinux", False) and self.platform.platform == "linux":
-                    self.commands[-1] += f" -D{self.cmake.cmake_arg_prefix}MANYLINUX=ON"
-
-            # Include mac deployment target
-            if self.platform.platform == "darwin":
-                self.commands[-1] += f" -DCMAKE_OSX_DEPLOYMENT_TARGET={environ.get('OSX_DEPLOYMENT_TARGET', '11')}"
-
-            # Append build command
-            self.commands.append(f"cmake --build {self.cmake.build} --config {self.build_type}")
-
-            # Append install command
-            self.commands.append(f"cmake --install {self.cmake.build} --config {self.build_type}")
-
-        return self.commands
-
-    def execute(self):
-        for command in self.commands:
-            system_call(command)
-        return self.commands
-
-    def cleanup(self):
-        if self.platform.platform == "win32":
-            for temp_obj in Path(".").glob("*.obj"):
-                temp_obj.unlink()

@@ -9,7 +9,7 @@ from typing import Any
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
-from .structs import HatchCppBuildConfig, HatchCppBuildPlan
+from .config import HatchCppBuildConfig, HatchCppBuildPlan
 from .utils import import_string
 
 __all__ = ("HatchCppBuildHook",)
