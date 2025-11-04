@@ -16,9 +16,11 @@ class TestProject:
             "test_project_override_classes",
             "test_project_override_toolchain",
             "test_project_pybind",
+            "test_project_pybind_vcpkg",
             "test_project_nanobind",
             "test_project_limited_api",
             "test_project_cmake",
+            "test_project_cmake_vcpkg",
         ],
     )
     def test_basic(self, project):
