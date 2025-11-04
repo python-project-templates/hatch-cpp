@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 from toml import loads
 
-from hatch_cpp.structs import HatchCppBuildConfig, HatchCppBuildPlan, HatchCppLibrary, HatchCppPlatform
+from hatch_cpp import HatchCppBuildConfig, HatchCppBuildPlan, HatchCppLibrary, HatchCppPlatform
 
 
 class TestStructs:

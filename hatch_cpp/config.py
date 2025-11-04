@@ -1,0 +1,80 @@
+from __future__ import annotations
+
+from os import system as system_call
+from pathlib import Path
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, model_validator
+
+from .toolchains import BuildType, HatchCppCmakeConfiguration, HatchCppLibrary, HatchCppPlatform, HatchCppVcpkgConfiguration
+
+__all__ = (
+    "HatchCppBuildConfig",
+    "HatchCppBuildPlan",
+)
+
+
+class HatchCppBuildConfig(BaseModel):
+    """Build config values for Hatch C++ Builder."""
+
+    verbose: Optional[bool] = Field(default=False)
+    name: Optional[str] = Field(default=None)
+    libraries: List[HatchCppLibrary] = Field(default_factory=list)
+    cmake: Optional[HatchCppCmakeConfiguration] = Field(default=None)
+    platform: Optional[HatchCppPlatform] = Field(default_factory=HatchCppPlatform.default)
+    vcpkg: Optional[HatchCppVcpkgConfiguration] = Field(default=None)
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def validate_model(cls, data, handler):
+        if "toolchain" in data:
+            data["platform"] = HatchCppPlatform.platform_for_toolchain(data["toolchain"])
+            data.pop("toolchain")
+        elif "platform" not in data:
+            data["platform"] = HatchCppPlatform.default()
+        if "cc" in data:
+            data["platform"].cc = data["cc"]
+            data.pop("cc")
+        if "cxx" in data:
+            data["platform"].cxx = data["cxx"]
+            data.pop("cxx")
+        if "ld" in data:
+            data["platform"].ld = data["ld"]
+            data.pop("ld")
+        model = handler(data)
+        if model.cmake and model.libraries:
+            raise ValueError("Must not provide libraries when using cmake toolchain.")
+        return model
+
+
+class HatchCppBuildPlan(HatchCppBuildConfig):
+    build_type: BuildType = "release"
+    commands: List[str] = Field(default_factory=list)
+
+    def generate(self):
+        self.commands = []
+
+        if self.vcpkg and Path(self.vcpkg.vcpkg).exists():
+            self.commands.extend(self.vcpkg.generate(self.platform))
+
+        if self.libraries:
+            for library in self.libraries:
+                compile_flags = self.platform.get_compile_flags(library, self.build_type)
+                link_flags = self.platform.get_link_flags(library, self.build_type)
+                self.commands.append(
+                    f"{self.platform.cc if library.language == 'c' else self.platform.cxx} {' '.join(library.sources)} {compile_flags} {link_flags}"
+                )
+        elif self.cmake:
+            self.commands.extend(self.cmake.generate(self))
+
+        return self.commands
+
+    def execute(self):
+        for command in self.commands:
+            system_call(command)
+        return self.commands
+
+    def cleanup(self):
+        if self.platform.platform == "win32":
+            for temp_obj in Path(".").glob("*.obj"):
+                temp_obj.unlink()
