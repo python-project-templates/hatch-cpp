@@ -13,6 +13,7 @@ from pydantic import AliasChoices, BaseModel, Field, field_validator, model_vali
 __all__ = (
     "BuildType",
     "CompilerToolchain",
+    "Toolchain",
     "Language",
     "Binding",
     "Platform",
@@ -24,6 +25,7 @@ __all__ = (
 
 BuildType = Literal["debug", "release"]
 CompilerToolchain = Literal["gcc", "clang", "msvc"]
+Toolchain = Literal["vcpkg", "cmake", "vanilla"]
 Language = Literal["c", "c++"]
 Binding = Literal["cpython", "pybind11", "nanobind", "generic"]
 Platform = Literal["linux", "darwin", "win32"]

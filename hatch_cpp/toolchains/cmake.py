@@ -11,6 +11,16 @@ from .common import Platform
 
 __all__ = ("HatchCppCmakeConfiguration",)
 
+DefaultMSVCGenerator = {
+    "12": "Visual Studio 12 2013",
+    "14": "Visual Studio 14 2015",
+    "14.0": "Visual Studio 14 2015",
+    "14.1": "Visual Studio 15 2017",
+    "14.2": "Visual Studio 16 2019",
+    "14.3": "Visual Studio 17 2022",
+    "14.4": "Visual Studio 17 2022",
+}
+
 
 class HatchCppCmakeConfiguration(BaseModel):
     root: Path
@@ -33,6 +43,10 @@ class HatchCppCmakeConfiguration(BaseModel):
         # Append base command
         commands.append(f"cmake {Path(self.root).parent} -DCMAKE_BUILD_TYPE={config.build_type} -B {self.build}")
 
+        # Hook in to vcpkg if active
+        if "vcpkg" in config._active_toolchains:
+            commands[-1] += f" -DCMAKE_TOOLCHAIN_FILE={Path(config.vcpkg.vcpkg_root) / 'scripts' / 'buildsystems' / 'vcpkg.cmake'}"
+
         # Setup install path
         if self.install:
             commands[-1] += f" -DCMAKE_INSTALL_PREFIX={self.install}"
@@ -42,7 +56,7 @@ class HatchCppCmakeConfiguration(BaseModel):
         # TODO: CMAKE_CXX_COMPILER
         if config.platform.platform == "win32":
             # TODO: prefix?
-            commands[-1] += f' -G "{environ.get("GENERATOR", "Visual Studio 17 2022")}"'
+            commands[-1] += f' -G "{environ.get("CMAKE_GENERATOR", "Visual Studio 17 2022")}"'
 
         # Put in CMake flags
         args = self.cmake_args.copy()

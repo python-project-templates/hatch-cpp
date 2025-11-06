@@ -157,3 +157,6 @@ hatch_cpp/labextension
 
 # Rust
 target
+
+vcpkg
+vcpkg_installed
