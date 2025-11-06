@@ -2,7 +2,7 @@
   "name": "main",
   "version-string": "latest",
   "dependencies": [
-    "arrow"
+    "nlohmann-json"
   ],
   "builtin-baseline": "b94ade01f19e4436d8c8a16a5c52e8c802ef67dd"
 }
