@@ -3,7 +3,7 @@ requires = ["hatchling>=1.20"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hatch-cpp-test-project-basic"
+name = "hatch-cpp-test-project-nanobind"
 description = "Basic test project for hatch-cpp"
 version = "0.1.0"
 requires-python = ">=3.9"
@@ -29,11 +29,8 @@ packages = ["project"]
 packages = ["project"]
 
 [tool.hatch.build.hooks.hatch-cpp]
-verbose = false
-
-[tool.hatch.build.hooks.hatch-cpp.cmake]
-root = "CMakeLists.txt"
-cmake_args = {"BUILD_TESTS" = "OFF"}
-include_flags = {"python_version" = true}
-[tool.hatch.build.hooks.hatch-cpp.cmake.cmake_env_args]
-linux = {"MANYLINUX" = "ON"}
+verbose = true
+libraries = [
+    # {name = "project/extension", sources = ["cpp/project/basic.cpp"], include-dirs = ["cpp"], binding = "nanobind"},
+    {name = "wrong", sources = ["wrong"], include-dirs = ["wrong"], binding = "generic"},
+]

@@ -35,6 +35,7 @@ classifiers = [
 
 dependencies = [
     "hatchling>=1.20",
+    "hatch-build>=0.4,<0.5",
     "pydantic",
 ]
 
@@ -45,7 +46,7 @@ develop = [
     "check-manifest",
     "codespell>=2.4,<2.5",
     "hatchling",
-    "hatch-build",
+    "hatch-build>=0.3.2",
     "mdformat>=0.7.22,<1.1",
     "mdformat-tables>=1",
     "pytest",

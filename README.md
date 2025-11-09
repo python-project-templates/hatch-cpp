@@ -83,6 +83,20 @@ cmake_env_args = {} # env-specific cmake args to pass
 include_flags = {} # include flags to pass -D
 ```
 
+### CLI
+
+`hatch-cpp` is integrated with [`hatch-build`](https://github.com/python-project-templates/hatch-build) to allow easy configuration of options via command line:
+
+```bash
+hatch-build \
+    -- \
+    --verbose \
+    --platform linux \
+    --vcpkg.vcpkg a/path/to/vcpkg.json \
+    --libraries.0.binding pybind11 \
+    --libraries.0.include-dirs cpp,another-dir
+```
+
 ### Environment Variables
 
 `hatch-cpp` will respect standard environment variables for compiler control.
