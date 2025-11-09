@@ -7,6 +7,7 @@ from platform import machine as platform_machine
 from sys import platform as sys_platform, version_info
 from typing import Any
 
+from hatch_build import parse_extra_args_model
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 from .config import HatchCppBuildConfig, HatchCppBuildPlan
@@ -51,6 +52,9 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
 
         # Instantiate builder
         build_plan = build_plan_class(**config.model_dump())
+
+        # Parse override args
+        parse_extra_args_model(build_plan)
 
         # Generate commands
         build_plan.generate()

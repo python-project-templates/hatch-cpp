@@ -3,7 +3,7 @@ from __future__ import annotations
 from os import environ
 from pathlib import Path
 from sys import version_info
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +23,7 @@ DefaultMSVCGenerator = {
 
 
 class HatchCppCmakeConfiguration(BaseModel):
-    root: Path
+    root: Optional[Path] = None
     build: Path = Field(default_factory=lambda: Path("build"))
     install: Optional[Path] = Field(default=None)
 
@@ -31,7 +31,7 @@ class HatchCppCmakeConfiguration(BaseModel):
     cmake_args: Dict[str, str] = Field(default_factory=dict)
     cmake_env_args: Dict[Platform, Dict[str, str]] = Field(default_factory=dict)
 
-    include_flags: Optional[Dict[str, Any]] = Field(default=None)
+    include_flags: Optional[Dict[str, Union[str, int, float, bool]]] = Field(default=None)
 
     def generate(self, config) -> Dict[str, Any]:
         commands = []
