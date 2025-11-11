@@ -97,17 +97,89 @@ hatch-build \
     --libraries.0.include-dirs cpp,another-dir
 ```
 
+This CLI is aware of your `pyproject.toml`-configured setup.
+To display help for this, run (note the passthrough `--`):
+
+```bash
+hatch-build -- --help
+```
+
+For example, for the `test_project_basic` in this project's `tests` folder:
+
+```raw
+hatch-build --hooks-only -- --help
+[sdist]
+
+[wheel]
+[2025-11-11T17:31:06-0500][p2a][WARNING]: Only dicts with str, int, float, bool, or enum values are supported - field `cmake_env_args` got value type typing.Dict[str, str]
+usage: hatch-build-extras-model [-h] [--verbose] [--name NAME] [--libraries.0.name LIBRARIES.0.NAME]
+                                [--libraries.0.sources.0 LIBRARIES.0.SOURCES.0] [--libraries.0.sources LIBRARIES.0.SOURCES]
+                                [--libraries.0.language LIBRARIES.0.LANGUAGE] [--libraries.0.binding LIBRARIES.0.BINDING]
+                                [--libraries.0.std LIBRARIES.0.STD] [--libraries.0.include-dirs.0 LIBRARIES.0.INCLUDE_DIRS.0]
+                                [--libraries.0.include-dirs LIBRARIES.0.INCLUDE_DIRS]
+                                [--libraries.0.library-dirs LIBRARIES.0.LIBRARY_DIRS]
+                                [--libraries.0.libraries LIBRARIES.0.LIBRARIES]
+                                [--libraries.0.extra-compile-args LIBRARIES.0.EXTRA_COMPILE_ARGS]
+                                [--libraries.0.extra-link-args LIBRARIES.0.EXTRA_LINK_ARGS]
+                                [--libraries.0.extra-objects LIBRARIES.0.EXTRA_OBJECTS]
+                                [--libraries.0.define-macros LIBRARIES.0.DEFINE_MACROS]
+                                [--libraries.0.undef-macros LIBRARIES.0.UNDEF_MACROS]
+                                [--libraries.0.export-symbols LIBRARIES.0.EXPORT_SYMBOLS]
+                                [--libraries.0.depends LIBRARIES.0.DEPENDS]
+                                [--libraries.0.py-limited-api LIBRARIES.0.PY_LIMITED_API] [--cmake.root CMAKE.ROOT]
+                                [--cmake.build CMAKE.BUILD] [--cmake.install CMAKE.INSTALL]
+                                [--cmake.cmake-arg-prefix CMAKE.CMAKE_ARG_PREFIX] [--cmake.cmake-args CMAKE.CMAKE_ARGS]
+                                [--cmake.include-flags CMAKE.INCLUDE_FLAGS] [--platform.cc PLATFORM.CC]
+                                [--platform.cxx PLATFORM.CXX] [--platform.ld PLATFORM.LD] [--platform.platform PLATFORM.PLATFORM]
+                                [--platform.toolchain PLATFORM.TOOLCHAIN] [--platform.disable-ccache] [--vcpkg.vcpkg VCPKG.VCPKG]
+                                [--vcpkg.vcpkg-root VCPKG.VCPKG_ROOT] [--vcpkg.vcpkg-repo VCPKG.VCPKG_REPO]
+                                [--vcpkg.vcpkg-triplet VCPKG.VCPKG_TRIPLET] [--build-type BUILD_TYPE] [--commands COMMANDS]
+
+options:
+  -h, --help            show this help message and exit
+  --verbose
+  --name NAME
+  --libraries.0.name LIBRARIES.0.NAME
+  --libraries.0.sources.0 LIBRARIES.0.SOURCES.0
+  --libraries.0.sources LIBRARIES.0.SOURCES
+  --libraries.0.language LIBRARIES.0.LANGUAGE
+  --libraries.0.binding LIBRARIES.0.BINDING
+  --libraries.0.std LIBRARIES.0.STD
+  --libraries.0.include-dirs.0 LIBRARIES.0.INCLUDE_DIRS.0
+  --libraries.0.include-dirs LIBRARIES.0.INCLUDE_DIRS
+  --libraries.0.library-dirs LIBRARIES.0.LIBRARY_DIRS
+  --libraries.0.libraries LIBRARIES.0.LIBRARIES
+  --libraries.0.extra-compile-args LIBRARIES.0.EXTRA_COMPILE_ARGS
+  --libraries.0.extra-link-args LIBRARIES.0.EXTRA_LINK_ARGS
+  --libraries.0.extra-objects LIBRARIES.0.EXTRA_OBJECTS
+  --libraries.0.define-macros LIBRARIES.0.DEFINE_MACROS
+  --libraries.0.undef-macros LIBRARIES.0.UNDEF_MACROS
+  --libraries.0.export-symbols LIBRARIES.0.EXPORT_SYMBOLS
+  --libraries.0.depends LIBRARIES.0.DEPENDS
+  --libraries.0.py-limited-api LIBRARIES.0.PY_LIMITED_API
+  --cmake.root CMAKE.ROOT
+  --cmake.build CMAKE.BUILD
+  --cmake.install CMAKE.INSTALL
+  --cmake.cmake-arg-prefix CMAKE.CMAKE_ARG_PREFIX
+  --cmake.cmake-args CMAKE.CMAKE_ARGS
+  --cmake.include-flags CMAKE.INCLUDE_FLAGS
+  --platform.cc PLATFORM.CC
+  --platform.cxx PLATFORM.CXX
+  --platform.ld PLATFORM.LD
+  --platform.platform PLATFORM.PLATFORM
+  --platform.toolchain PLATFORM.TOOLCHAIN
+  --platform.disable-ccache
+  --vcpkg.vcpkg VCPKG.VCPKG
+  --vcpkg.vcpkg-root VCPKG.VCPKG_ROOT
+  --vcpkg.vcpkg-repo VCPKG.VCPKG_REPO
+  --vcpkg.vcpkg-triplet VCPKG.VCPKG_TRIPLET
+  --build-type BUILD_TYPE
+  --commands COMMANDS
+```
+
 ### Environment Variables
 
-`hatch-cpp` will respect standard environment variables for compiler control.
-
-| Name                       | Default | Description           |
-| :------------------------- | :------ | :-------------------- |
-| `CC`                       |         | C Compiler override   |
-| `CXX`                      |         | C++ Compiler override |
-| `LD`                       |         | Linker override       |
-| `HATCH_CPP_PLATFORM`       |         | Platform to build     |
-| `HATCH_CPP_DISABLE_CCACHE` |         | Disable CCache usage  |
+`hatch-cpp` will respect standard environment variables for compiler control, e.g. `CC`, `CXX`, `LD`, `CMAKE_GENERATOR`, `OSX_DEPLOYMENT_TARGET`, etc.
 
 > [!NOTE]
 > This library was generated using [copier](https://copier.readthedocs.io/en/stable/) from the [Base Python Project Template repository](https://github.com/python-project-templates/base).

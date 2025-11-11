@@ -96,13 +96,13 @@ class HatchCppPlatform(BaseModel):
     ld: str
     platform: Platform
     toolchain: CompilerToolchain
+    disable_ccache: bool = False
 
     @staticmethod
     def default() -> HatchCppPlatform:
-        platform = environ.get("HATCH_CPP_PLATFORM", sys_platform)
-        CC = environ.get("CC", PlatformDefaults[platform]["CC"])
-        CXX = environ.get("CXX", PlatformDefaults[platform]["CXX"])
-        LD = environ.get("LD", PlatformDefaults[platform]["LD"])
+        CC = environ.get("CC", PlatformDefaults[sys_platform]["CC"])
+        CXX = environ.get("CXX", PlatformDefaults[sys_platform]["CXX"])
+        LD = environ.get("LD", PlatformDefaults[sys_platform]["LD"])
         if "gcc" in CC and "g++" in CXX:
             toolchain = "gcc"
         elif "clang" in CC and "clang++" in CXX:
@@ -110,26 +110,34 @@ class HatchCppPlatform(BaseModel):
         elif "cl" in CC and "cl" in CXX:
             toolchain = "msvc"
         # Fallback to platform defaults
-        elif platform == "linux":
+        elif sys_platform == "linux":
             toolchain = "gcc"
-        elif platform == "darwin":
+        elif sys_platform == "darwin":
             toolchain = "clang"
-        elif platform == "win32":
+        elif sys_platform == "win32":
             toolchain = "msvc"
         else:
             toolchain = "gcc"
 
-        # Customizations
-        if which("ccache") and not environ.get("HATCH_CPP_DISABLE_CCACHE"):
-            CC = f"ccache {CC}"
-            CXX = f"ccache {CXX}"
-
+        # TODO:
         # https://github.com/rui314/mold/issues/647
         # if which("ld.mold"):
         #     LD = which("ld.mold")
         # elif which("ld.lld"):
         #     LD = which("ld.lld")
-        return HatchCppPlatform(cc=CC, cxx=CXX, ld=LD, platform=platform, toolchain=toolchain)
+        return HatchCppPlatform(cc=CC, cxx=CXX, ld=LD, platform=sys_platform, toolchain=toolchain)
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def validate_model(cls, data, handler):
+        model = handler(data)
+        if which("ccache") and not model.disable_ccache:
+            if model.toolchain in ["gcc", "clang"]:
+                if not model.cc.startswith("ccache "):
+                    model.cc = f"ccache {model.cc}"
+                if not model.cxx.startswith("ccache "):
+                    model.cxx = f"ccache {model.cxx}"
+        return model
 
     @staticmethod
     def platform_for_toolchain(toolchain: CompilerToolchain) -> HatchCppPlatform:

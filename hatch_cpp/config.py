@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from logging import getLogger
 from os import system as system_call
 from pathlib import Path
 from typing import List, Optional
 
+from pkn import getSimpleLogger
 from pydantic import BaseModel, Field, model_validator
 
 from .toolchains import BuildType, HatchCppCmakeConfiguration, HatchCppLibrary, HatchCppPlatform, HatchCppVcpkgConfiguration, Toolchain
@@ -15,13 +15,14 @@ __all__ = (
 )
 
 
-_log = getLogger(__name__)
+log = getSimpleLogger("hatch_cpp")
 
 
 class HatchCppBuildConfig(BaseModel):
     """Build config values for Hatch C++ Builder."""
 
     verbose: Optional[bool] = Field(default=False)
+    skip: Optional[bool] = Field(default=False)
     name: Optional[str] = Field(default=None)
     libraries: List[HatchCppLibrary] = Field(default_factory=list)
     cmake: Optional[HatchCppCmakeConfiguration] = Field(default=None)
@@ -76,7 +77,7 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
 
         if "vanilla" in self._active_toolchains:
             if "vcpkg" in self._active_toolchains:
-                _log.warning("vcpkg toolchain is active; ensure that your compiler is configured to use vcpkg includes and libs.")
+                log.warning("vcpkg toolchain is active; ensure that your compiler is configured to use vcpkg includes and libs.")
 
             for library in self.libraries:
                 compile_flags = self.platform.get_compile_flags(library, self.build_type)

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from logging import getLogger
-from os import getenv
 from pathlib import Path
 from platform import machine as platform_machine
 from sys import platform as sys_platform, version_info
@@ -10,7 +8,7 @@ from typing import Any
 from hatch_build import parse_extra_args_model
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
-from .config import HatchCppBuildConfig, HatchCppBuildPlan
+from .config import HatchCppBuildConfig, HatchCppBuildPlan, log
 from .utils import import_string
 
 __all__ = ("HatchCppBuildHook",)
@@ -20,7 +18,7 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
     """The hatch-cpp build hook."""
 
     PLUGIN_NAME = "hatch-cpp"
-    _logger = getLogger(__name__)
+    _logger = log
 
     def initialize(self, version: str, build_data: dict[str, Any]) -> None:
         """Initialize the plugin."""
@@ -33,12 +31,6 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
         # TODO: Add support for specify sdist-plan
         if self.target_name != "wheel":
             self._logger.info("ignoring target name %s", self.target_name)
-            return
-
-        # Skip if SKIP_HATCH_CPP is set
-        # TODO: Support CLI once https://github.com/pypa/hatch/pull/1743
-        if getenv("SKIP_HATCH_CPP"):
-            self._logger.info("Skipping the build hook since SKIP_HATCH_CPP was set")
             return
 
         # Get build config class or use default
@@ -60,9 +52,13 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
         build_plan.generate()
 
         # Log commands if in verbose mode
-        if config.verbose:
+        if build_plan.verbose:
             for command in build_plan.commands:
                 self._logger.warning(command)
+
+        if build_plan.skip:
+            self._logger.warning("Skipping build")
+            return
 
         # Execute build plan
         build_plan.execute()
@@ -114,4 +110,4 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
                     build_data["force_include"][str(path)] = str(path)
 
         for path in build_data["force_include"]:
-            self._logger.warning(f"Force include: {path}")
+            self._logger.info(f"Force include: {path}")
