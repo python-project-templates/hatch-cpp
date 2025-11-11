@@ -76,7 +76,7 @@ Homepage = "https://github.com/python-project-templates/hatch-cpp"
 [tool.bumpversion]
 current_version = "0.2.2"
 commit = true
-tag = false
+tag = true
 commit_args = "-s"
 
 [[tool.bumpversion.files]]
