@@ -33,6 +33,7 @@ VcpkgPlatformDefaults = {
     ("darwin", "x86_64"): "x64-osx",
     ("darwin", "arm64"): "arm64-osx",
     ("win32", "x86_64"): "x64-windows-static-md",
+    ("win32", "AMD64"): "x64-windows-static-md",
     ("win32", "arm64"): "arm64-windows-static-md",
 }
 
