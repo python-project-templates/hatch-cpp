@@ -5,7 +5,7 @@ from pathlib import Path
 from re import match
 from shutil import which
 from sys import executable, platform as sys_platform
-from sysconfig import get_path
+from sysconfig import get_config_var, get_path
 from typing import Any, List, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
@@ -368,8 +368,16 @@ class HatchCppPlatform(BaseModel):
             flags += " /LD"
             flags += f" /Fe:{library.get_qualified_name(self.platform)}"
             flags += " /link /DLL"
-            if (Path(executable).parent / "libs").exists():
-                flags += f" /LIBPATH:{str(Path(executable).parent / 'libs')}"
+            # Add Python libs directory - check multiple possible locations
+            python_libs_paths = [
+                Path(executable).parent / "libs",  # Standard Python install
+                Path(executable).parent.parent / "libs",  # Some virtualenv layouts
+                Path(get_config_var("installed_base") or "") / "libs",  # sysconfig approach
+            ]
+            for libs_path in python_libs_paths:
+                if libs_path.exists():
+                    flags += f" /LIBPATH:{str(libs_path)}"
+                    break
             flags += " " + " ".join(f"{lib}.lib" for lib in effective_libraries)
             flags += " " + " ".join(f"/LIBPATH:{lib}" for lib in effective_library_dirs)
         # clean

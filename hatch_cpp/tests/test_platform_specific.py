@@ -454,3 +454,82 @@ class TestPlatformFieldOrdering:
         # Base list should not be modified
         assert library.include_dirs == ["common"]
         assert library.include_dirs_linux == ["linux"]
+
+
+class TestMSVCPythonLibsPath:
+    """Tests for MSVC Python libs path discovery."""
+
+    def test_msvc_link_flags_include_libpath(self):
+        """Test that MSVC link flags include /LIBPATH for Python libs."""
+        library = HatchCppLibrary(
+            name="test",
+            sources=["test.cpp"],
+            binding="generic",  # Skip Python.h include
+        )
+
+        platform = HatchCppPlatform(
+            cc="cl",
+            cxx="cl",
+            ld="link",
+            platform="win32",
+            toolchain="msvc",
+            disable_ccache=True,
+        )
+
+        flags = platform.get_link_flags(library)
+        # Should have /link /DLL flags
+        assert "/link" in flags
+        assert "/DLL" in flags
+        # Should have output file
+        assert "/Fe:" in flags
+
+    def test_msvc_link_flags_with_libraries(self):
+        """Test that MSVC link flags properly format library names."""
+        library = HatchCppLibrary(
+            name="test",
+            sources=["test.cpp"],
+            binding="generic",
+            libraries=["mylib"],
+            library_dirs=["path/to/libs"],
+        )
+
+        platform = HatchCppPlatform(
+            cc="cl",
+            cxx="cl",
+            ld="link",
+            platform="win32",
+            toolchain="msvc",
+            disable_ccache=True,
+        )
+
+        flags = platform.get_link_flags(library)
+        # Libraries should have .lib suffix on Windows
+        assert "mylib.lib" in flags
+        # Library dirs should use /LIBPATH:
+        assert "/LIBPATH:path/to/libs" in flags
+
+    def test_msvc_link_flags_with_platform_specific_libraries(self):
+        """Test that MSVC uses win32-specific libraries."""
+        library = HatchCppLibrary(
+            name="test",
+            sources=["test.cpp"],
+            binding="generic",
+            libraries=["common"],
+            libraries_win32=["kernel32", "user32"],
+            library_dirs_win32=["C:/Windows/System32"],
+        )
+
+        platform = HatchCppPlatform(
+            cc="cl",
+            cxx="cl",
+            ld="link",
+            platform="win32",
+            toolchain="msvc",
+            disable_ccache=True,
+        )
+
+        flags = platform.get_link_flags(library)
+        assert "common.lib" in flags
+        assert "kernel32.lib" in flags
+        assert "user32.lib" in flags
+        assert "/LIBPATH:C:/Windows/System32" in flags
