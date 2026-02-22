@@ -156,11 +156,9 @@ hatch_cpp/labextension
 # Rust
 target
 
-<<<<<<< before updating
-vcpkg
-vcpkg_installed
-=======
 # Hydra
 outputs/
 multirun/
->>>>>>> after updating
+
+vcpkg
+vcpkg_installed
