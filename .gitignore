@@ -141,14 +141,12 @@ js/node_modules
 js/test-results
 js/playwright-report
 js/*.tgz
-hatch_cpp/extension
 
 # Jupyter
 .ipynb_checkpoints
 .autoversion
 Untitled*.ipynb
-!hatch_cpp/extension/hatch_cpp.json
-!hatch_cpp/extension/install.json
+hatch_cpp/extension
 hatch_cpp/nbextension
 hatch_cpp/labextension
 
@@ -157,6 +155,10 @@ hatch_cpp/labextension
 
 # Rust
 target
+
+# Hydra
+outputs/
+multirun/
 
 vcpkg
 vcpkg_installed
