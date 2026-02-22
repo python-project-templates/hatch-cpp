@@ -51,12 +51,8 @@ develop = [
     "check-dist",
     "codespell",
     "hatchling",
-<<<<<<< before updating
     "hatch-build>=0.3.2",
-    "mdformat>=0.7.22,<1.1",
-=======
     "mdformat",
->>>>>>> after updating
     "mdformat-tables>=1",
     "pytest",
     "pytest-cov",
