@@ -4,7 +4,7 @@ from os import environ
 from pathlib import Path
 from re import match
 from shutil import which
-from sys import executable, platform as sys_platform
+from sys import base_exec_prefix, exec_prefix, executable, platform as sys_platform
 from sysconfig import get_config_var, get_path
 from typing import Any, List, Literal, Optional
 
@@ -369,10 +369,14 @@ class HatchCppPlatform(BaseModel):
             flags += f" /Fe:{library.get_qualified_name(self.platform)}"
             flags += " /link /DLL"
             # Add Python libs directory - check multiple possible locations
+            # In virtual environments, sys.executable is in the venv, but pythonXX.lib
+            # lives under the base Python installation's 'libs' directory.
             python_libs_paths = [
                 Path(executable).parent / "libs",  # Standard Python install
                 Path(executable).parent.parent / "libs",  # Some virtualenv layouts
                 Path(get_config_var("installed_base") or "") / "libs",  # sysconfig approach
+                Path(exec_prefix) / "libs",  # exec_prefix approach
+                Path(base_exec_prefix) / "libs",  # base_exec_prefix approach
             ]
             for libs_path in python_libs_paths:
                 if libs_path.exists():
