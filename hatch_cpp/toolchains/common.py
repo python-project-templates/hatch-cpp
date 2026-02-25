@@ -323,7 +323,9 @@ class HatchCppPlatform(BaseModel):
             flags += " " + " ".join(f"/U{macro}" for macro in effective_undef_macros)
             flags += " /EHsc /DWIN32"
             if library.std:
-                flags += f" /std:{library.std}"
+                # MSVC minimum is c++14; clamp older standards
+                std = library.std if library.std not in ("c++11", "c++0x") else "c++14"
+                flags += f" /std:{std}"
         # clean
         while flags.count("  "):
             flags = flags.replace("  ", " ")

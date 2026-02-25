@@ -93,7 +93,9 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
 
     def execute(self):
         for command in self.commands:
-            system_call(command)
+            ret = system_call(command)
+            if ret != 0:
+                raise RuntimeError(f"hatch-cpp build command failed with exit code {ret}: {command}")
         return self.commands
 
     def cleanup(self):
