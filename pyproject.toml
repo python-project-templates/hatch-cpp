@@ -12,7 +12,7 @@ authors = [
 description = "Hatch plugin for C++ builds"
 readme = "README.md"
 license = { text = "Apache-2.0" }
-version = "0.3.2"
+version = "0.3.3"
 requires-python = ">=3.10"
 keywords = [
     "hatch",
@@ -80,7 +80,7 @@ Repository = "https://github.com/python-project-templates/hatch-cpp"
 Homepage = "https://github.com/python-project-templates/hatch-cpp"
 
 [tool.bumpversion]
-current_version = "0.3.2"
+current_version = "0.3.3"
 commit = true
 tag = true
 commit_args = "-s"
