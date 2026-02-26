@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import configparser
 from pathlib import Path
 from platform import machine as platform_machine
 from sys import platform as sys_platform
@@ -38,13 +39,44 @@ VcpkgPlatformDefaults = {
 }
 
 
+def _read_vcpkg_ref_from_gitmodules(vcpkg_root: Path) -> Optional[str]:
+    """Read the branch/ref for vcpkg from .gitmodules if it exists.
+
+    Looks for a submodule whose path matches ``vcpkg_root`` and returns
+    its ``branch`` value when present.
+    """
+    gitmodules_path = Path(".gitmodules")
+    if not gitmodules_path.exists():
+        return None
+
+    parser = configparser.ConfigParser()
+    parser.read(str(gitmodules_path))
+
+    for section in parser.sections():
+        if parser.get(section, "path", fallback=None) == str(vcpkg_root):
+            return parser.get(section, "branch", fallback=None)
+
+    return None
+
+
 class HatchCppVcpkgConfiguration(BaseModel):
     vcpkg: Optional[str] = Field(default="vcpkg.json")
     vcpkg_root: Optional[Path] = Field(default=Path("vcpkg"))
     vcpkg_repo: Optional[str] = Field(default="https://github.com/microsoft/vcpkg.git")
     vcpkg_triplet: Optional[VcpkgTriplet] = Field(default=None)
+    vcpkg_ref: Optional[str] = Field(
+        default=None,
+        description="Branch, tag, or commit SHA to checkout after cloning vcpkg. "
+        "If not set, falls back to the branch specified in .gitmodules for the vcpkg submodule.",
+    )
 
     # TODO: overlay
+
+    def _resolve_vcpkg_ref(self) -> Optional[str]:
+        """Return the ref to checkout: explicit config takes priority, then .gitmodules."""
+        if self.vcpkg_ref is not None:
+            return self.vcpkg_ref
+        return _read_vcpkg_ref_from_gitmodules(self.vcpkg_root)
 
     def generate(self, config):
         commands = []
@@ -57,9 +89,12 @@ class HatchCppVcpkgConfiguration(BaseModel):
         if self.vcpkg and Path(self.vcpkg).exists():
             if not Path(self.vcpkg_root).exists():
                 commands.append(f"git clone {self.vcpkg_repo} {self.vcpkg_root}")
-                commands.append(
-                    f"./{self.vcpkg_root / 'bootstrap-vcpkg.sh' if sys_platform != 'win32' else self.vcpkg_root / 'sbootstrap-vcpkg.bat'}"
-                )
+
+                ref = self._resolve_vcpkg_ref()
+                if ref is not None:
+                    commands.append(f"git -C {self.vcpkg_root} checkout {ref}")
+
+                commands.append(f"./{self.vcpkg_root / 'bootstrap-vcpkg.sh' if sys_platform != 'win32' else self.vcpkg_root / 'bootstrap-vcpkg.bat'}")
             commands.append(f"./{self.vcpkg_root / 'vcpkg'} install --triplet {self.vcpkg_triplet}")
 
         return commands
