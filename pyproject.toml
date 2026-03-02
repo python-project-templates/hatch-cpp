@@ -100,6 +100,7 @@ branch = false
 omit = [
     "hatch_cpp/tests/integration/",
 ]
+
 [tool.coverage.report]
 exclude_also = [
     "raise NotImplementedError",
