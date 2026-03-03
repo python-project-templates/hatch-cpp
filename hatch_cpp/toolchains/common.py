@@ -20,6 +20,7 @@ __all__ = (
     "PlatformDefaults",
     "HatchCppLibrary",
     "HatchCppPlatform",
+    "_normalize_rpath",
 )
 
 
@@ -207,6 +208,28 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
         return macros
 
 
+def _normalize_rpath(value: str, platform: Platform) -> str:
+    r"""Translate and escape rpath values for the target platform.
+
+    - On macOS (darwin): ``$ORIGIN`` is replaced with ``@loader_path``.
+    - On Linux: ``@loader_path`` is replaced with ``$ORIGIN``, and
+      ``$ORIGIN`` is escaped as ``\$ORIGIN`` so that ``os.system()``
+      (which invokes a shell) passes it through literally.
+    - On Windows: no transformation is applied (Windows does not use
+      rpath).
+    """
+    if platform == "darwin":
+        # Handle already-escaped \$ORIGIN first, then plain $ORIGIN
+        value = value.replace(r"\$ORIGIN", "@loader_path")
+        value = value.replace("$ORIGIN", "@loader_path")
+    elif platform == "linux":
+        # Translate macOS rpath to Linux equivalent
+        value = value.replace("@loader_path", "$ORIGIN")
+        # Escape $ORIGIN for shell safety (os.system runs through bash)
+        value = value.replace("$ORIGIN", r"\$ORIGIN")
+    return value
+
+
 class HatchCppPlatform(BaseModel):
     cc: str
     cxx: str
@@ -337,6 +360,9 @@ class HatchCppPlatform(BaseModel):
         effective_extra_objects = library.get_effective_extra_objects(self.platform)
         effective_libraries = library.get_effective_libraries(self.platform)
         effective_library_dirs = library.get_effective_library_dirs(self.platform)
+
+        # Normalize rpath values ($ORIGIN <-> @loader_path) and escape for shell
+        effective_link_args = [_normalize_rpath(arg, self.platform) for arg in effective_link_args]
 
         if self.toolchain == "gcc":
             flags += " -shared"

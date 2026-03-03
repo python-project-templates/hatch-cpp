@@ -345,7 +345,7 @@ class TestPlatformFlagsIntegration:
 
         flags = platform.get_link_flags(library)
         assert "-shared" in flags
-        assert "-Wl,-rpath,$ORIGIN/lib" in flags
+        assert r"-Wl,-rpath,\$ORIGIN/lib" in flags
 
     def test_darwin_platform_uses_darwin_specific_fields(self):
         """Test that darwin platform uses darwin-specific fields."""
