@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from toml import loads
 
 from hatch_cpp import HatchCppBuildConfig, HatchCppBuildPlan, HatchCppLibrary, HatchCppPlatform
+from hatch_cpp.toolchains.common import _normalize_rpath
 
 
 class TestStructs:
@@ -168,3 +169,72 @@ class TestStructs:
         with patch.dict(environ, {"HATCH_CPP_VCPKG": "1"}):
             hatch_build_plan.generate()
             assert "vcpkg" in hatch_build_plan._active_toolchains
+
+
+class TestNormalizeRpath:
+    def test_origin_to_loader_path_on_darwin(self):
+        """$ORIGIN should be translated to @loader_path on macOS."""
+        assert _normalize_rpath("-Wl,-rpath,$ORIGIN", "darwin") == "-Wl,-rpath,@loader_path"
+
+    def test_loader_path_to_origin_on_linux(self):
+        """@loader_path should be translated to (escaped) $ORIGIN on Linux."""
+        result = _normalize_rpath("-Wl,-rpath,@loader_path", "linux")
+        assert result == r"-Wl,-rpath,\$ORIGIN"
+
+    def test_origin_escaped_on_linux(self):
+        """$ORIGIN should be escaped as \\$ORIGIN on Linux for shell safety."""
+        result = _normalize_rpath("-Wl,-rpath,$ORIGIN", "linux")
+        assert result == r"-Wl,-rpath,\$ORIGIN"
+
+    def test_already_escaped_origin_on_darwin(self):
+        """Already-escaped \\$ORIGIN should still translate to @loader_path on macOS."""
+        assert _normalize_rpath(r"-Wl,-rpath,\$ORIGIN", "darwin") == "-Wl,-rpath,@loader_path"
+
+    def test_no_rpath_unchanged(self):
+        """Args without rpath values should pass through unchanged."""
+        assert _normalize_rpath("-lfoo", "linux") == "-lfoo"
+        assert _normalize_rpath("-lfoo", "darwin") == "-lfoo"
+
+    def test_win32_no_transform(self):
+        """Windows should not transform rpath values."""
+        assert _normalize_rpath("$ORIGIN", "win32") == "$ORIGIN"
+        assert _normalize_rpath("@loader_path", "win32") == "@loader_path"
+
+    def test_link_flags_rpath_translation_darwin(self):
+        """Full integration: extra_link_args with $ORIGIN produce @loader_path on macOS."""
+        library = HatchCppLibrary(
+            name="test",
+            sources=["test.cpp"],
+            binding="generic",
+            extra_link_args=["-Wl,-rpath,$ORIGIN"],
+        )
+        platform = HatchCppPlatform(
+            cc="clang",
+            cxx="clang++",
+            ld="ld",
+            platform="darwin",
+            toolchain="clang",
+            disable_ccache=True,
+        )
+        flags = platform.get_link_flags(library)
+        assert "@loader_path" in flags
+        assert "$ORIGIN" not in flags
+
+    def test_link_flags_rpath_escaped_linux(self):
+        """Full integration: extra_link_args with $ORIGIN are shell-escaped on Linux."""
+        library = HatchCppLibrary(
+            name="test",
+            sources=["test.cpp"],
+            binding="generic",
+            extra_link_args=["-Wl,-rpath,$ORIGIN"],
+        )
+        platform = HatchCppPlatform(
+            cc="gcc",
+            cxx="g++",
+            ld="ld",
+            platform="linux",
+            toolchain="gcc",
+            disable_ccache=True,
+        )
+        flags = platform.get_link_flags(library)
+        assert r"\$ORIGIN" in flags
