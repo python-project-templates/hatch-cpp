@@ -54,9 +54,14 @@ class HatchCppCmakeConfiguration(BaseModel):
             commands[-1] += f" -DCMAKE_INSTALL_PREFIX={Path(self.root).parent}"
 
         # TODO: CMAKE_CXX_COMPILER
+        # Respect CMAKE_GENERATOR environment variable
+        cmake_generator = environ.get("CMAKE_GENERATOR", "")
         if config.platform.platform == "win32":
-            # TODO: prefix?
-            commands[-1] += f' -G "{environ.get("CMAKE_GENERATOR", "Visual Studio 17 2022")}"'
+            if not cmake_generator:
+                cmake_generator = "Visual Studio 17 2022"
+            commands[-1] += f' -G "{cmake_generator}"'
+        elif cmake_generator:
+            commands[-1] += f' -G "{cmake_generator}"'
 
         # Put in CMake flags
         args = self.cmake_args.copy()
@@ -77,6 +82,11 @@ class HatchCppCmakeConfiguration(BaseModel):
         # Include mac deployment target
         if config.platform.platform == "darwin":
             commands[-1] += f" -DCMAKE_OSX_DEPLOYMENT_TARGET={environ.get('OSX_DEPLOYMENT_TARGET', '11')}"
+
+        # Respect CMAKE_ARGS environment variable
+        cmake_args_env = environ.get("CMAKE_ARGS", "").strip()
+        if cmake_args_env:
+            commands[-1] += " " + cmake_args_env
 
         # Append build command
         commands.append(f"cmake --build {self.build} --config {config.build_type}")

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from os import system as system_call
+from os import environ, system as system_call
 from pathlib import Path
 from typing import List, Optional
 
@@ -63,12 +63,27 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
     def generate(self):
         self.commands = []
 
+        # Check for env var overrides
+        vcpkg_override = environ.get("HATCH_CPP_VCPKG")
+        cmake_override = environ.get("HATCH_CPP_CMAKE")
+
         # Evaluate toolchains
-        if self.vcpkg and Path(self.vcpkg.vcpkg).exists():
+        if vcpkg_override == "1":
+            if self.vcpkg:
+                self._active_toolchains.append("vcpkg")
+            else:
+                log.warning("HATCH_CPP_VCPKG=1 set but no vcpkg configuration found; ignoring.")
+        elif vcpkg_override != "0" and self.vcpkg and Path(self.vcpkg.vcpkg).exists():
             self._active_toolchains.append("vcpkg")
+
         if self.libraries:
             self._active_toolchains.append("vanilla")
-        elif self.cmake:
+        elif cmake_override == "1":
+            if self.cmake:
+                self._active_toolchains.append("cmake")
+            else:
+                log.warning("HATCH_CPP_CMAKE=1 set but no cmake configuration found; ignoring.")
+        elif cmake_override != "0" and self.cmake:
             self._active_toolchains.append("cmake")
 
         # Collect toolchain commands
