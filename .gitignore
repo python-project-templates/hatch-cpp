@@ -146,12 +146,10 @@ target
 outputs/
 multirun/
 
-<<<<<<< before updating
-vcpkg
-vcpkg_installed
-=======
 # AI
 ROADMAP.md
 AGENTS.md
 .github/hooks/sdlc.json
->>>>>>> after updating
+
+vcpkg
+vcpkg_installed
