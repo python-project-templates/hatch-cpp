@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import configparser
+import subprocess
 from pathlib import Path
 from platform import machine as platform_machine
 from sys import platform as sys_platform
@@ -78,6 +79,39 @@ class HatchCppVcpkgConfiguration(BaseModel):
             return self.vcpkg_ref
         return _read_vcpkg_ref_from_gitmodules(self.vcpkg_root)
 
+    def _bootstrap_script_path(self) -> Path:
+        return self.vcpkg_root / ("bootstrap-vcpkg.bat" if sys_platform == "win32" else "bootstrap-vcpkg.sh")
+
+    def _vcpkg_executable_path(self) -> Path:
+        if sys_platform == "win32":
+            return self.vcpkg_root / "vcpkg.exe"
+        return self.vcpkg_root / "vcpkg"
+
+    def _delete_dir_command(self, path: Path) -> str:
+        if sys_platform == "win32":
+            return f'rmdir /s /q "{path}"'
+        return f'rm -rf "{path}"'
+
+    def _is_vcpkg_working(self) -> bool:
+        vcpkg_executable = self._vcpkg_executable_path()
+        if not vcpkg_executable.exists():
+            return False
+        try:
+            result = subprocess.run([str(vcpkg_executable), "version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            return result.returncode == 0
+        except OSError:
+            return False
+
+    def _clone_checkout_bootstrap_commands(self) -> list[str]:
+        commands = [f"git clone {self.vcpkg_repo} {self.vcpkg_root}"]
+
+        ref = self._resolve_vcpkg_ref()
+        if ref is not None:
+            commands.append(f"git -C {self.vcpkg_root} checkout {ref}")
+
+        commands.append(f"./{self._bootstrap_script_path()}")
+        return commands
+
     def generate(self, config):
         commands = []
 
@@ -87,14 +121,24 @@ class HatchCppVcpkgConfiguration(BaseModel):
                 raise ValueError(f"Could not determine vcpkg triplet for platform {sys_platform} and architecture {platform_machine()}")
 
         if self.vcpkg and Path(self.vcpkg).exists():
-            if not Path(self.vcpkg_root).exists():
-                commands.append(f"git clone {self.vcpkg_repo} {self.vcpkg_root}")
+            vcpkg_root = Path(self.vcpkg_root)
+            bootstrap_script = self._bootstrap_script_path()
 
-                ref = self._resolve_vcpkg_ref()
-                if ref is not None:
-                    commands.append(f"git -C {self.vcpkg_root} checkout {ref}")
+            if not vcpkg_root.exists():
+                commands.extend(self._clone_checkout_bootstrap_commands())
+            else:
+                is_empty_dir = vcpkg_root.is_dir() and not any(vcpkg_root.iterdir())
+                if is_empty_dir:
+                    commands.append(self._delete_dir_command(vcpkg_root))
+                    commands.extend(self._clone_checkout_bootstrap_commands())
+                else:
+                    vcpkg_executable = self._vcpkg_executable_path()
+                    if not vcpkg_executable.exists():
+                        commands.append(f"./{bootstrap_script}")
+                    elif not self._is_vcpkg_working():
+                        commands.append(self._delete_dir_command(vcpkg_root))
+                        commands.extend(self._clone_checkout_bootstrap_commands())
 
-                commands.append(f"./{self.vcpkg_root / 'bootstrap-vcpkg.sh' if sys_platform != 'win32' else self.vcpkg_root / 'bootstrap-vcpkg.bat'}")
             commands.append(f"./{self.vcpkg_root / 'vcpkg'} install --triplet {self.vcpkg_triplet}")
 
         return commands
