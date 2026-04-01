@@ -156,14 +156,66 @@ class TestVcpkgGenerate:
     def test_generate_skips_clone_when_vcpkg_root_exists(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         self._make_vcpkg_env(tmp_path)
+        vcpkg_root = tmp_path / "vcpkg"
+        vcpkg_root.mkdir()
+        # Existing bootstrap script and executable mean no clone/bootstrap is needed.
+        (vcpkg_root / "bootstrap-vcpkg.sh").write_text("#!/bin/sh\nexit 0\n")
+        (vcpkg_root / "vcpkg").write_text("#!/bin/sh\nexit 0\n")
+
+        cfg = HatchCppVcpkgConfiguration(vcpkg_ref="2024.01.12")
+        monkeypatch.setattr(cfg, "_is_vcpkg_working", lambda: True)
+        commands = cfg.generate(None)
+
+        # When vcpkg_root already exists with a working executable, no clone or bootstrap happens.
+        assert not any("git clone" in cmd for cmd in commands)
+        assert not any("checkout" in cmd for cmd in commands)
+        assert not any("bootstrap-vcpkg" in cmd for cmd in commands)
+        assert any("vcpkg" in cmd and "install" in cmd for cmd in commands)
+
+    def test_generate_reclones_when_vcpkg_root_exists_but_empty(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        self._make_vcpkg_env(tmp_path)
         (tmp_path / "vcpkg").mkdir()
 
         cfg = HatchCppVcpkgConfiguration(vcpkg_ref="2024.01.12")
         commands = cfg.generate(None)
 
-        # When vcpkg_root already exists, no clone or checkout happens
+        assert any(cmd.startswith('rm -rf "vcpkg"') for cmd in commands)
+        assert any("git clone" in cmd for cmd in commands)
+        assert any("checkout 2024.01.12" in cmd for cmd in commands)
+        assert any("bootstrap-vcpkg" in cmd for cmd in commands)
+        assert any("vcpkg" in cmd and "install" in cmd for cmd in commands)
+
+    def test_generate_bootstraps_when_vcpkg_executable_missing(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        self._make_vcpkg_env(tmp_path)
+        vcpkg_root = tmp_path / "vcpkg"
+        vcpkg_root.mkdir()
+        (vcpkg_root / "bootstrap-vcpkg.sh").write_text("#!/bin/sh\nexit 0\n")
+
+        cfg = HatchCppVcpkgConfiguration(vcpkg_ref="2024.01.12")
+        commands = cfg.generate(None)
+
         assert not any("git clone" in cmd for cmd in commands)
-        assert not any("checkout" in cmd for cmd in commands)
+        assert any("bootstrap-vcpkg" in cmd for cmd in commands)
+        assert any("vcpkg" in cmd and "install" in cmd for cmd in commands)
+
+    def test_generate_reclones_when_vcpkg_exists_but_not_working(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        self._make_vcpkg_env(tmp_path)
+        vcpkg_root = tmp_path / "vcpkg"
+        vcpkg_root.mkdir()
+        (vcpkg_root / "bootstrap-vcpkg.sh").write_text("#!/bin/sh\nexit 0\n")
+        (vcpkg_root / "vcpkg").write_text("#!/bin/sh\nexit 1\n")
+
+        cfg = HatchCppVcpkgConfiguration(vcpkg_ref="2024.01.12")
+        monkeypatch.setattr(cfg, "_is_vcpkg_working", lambda: False)
+        commands = cfg.generate(None)
+
+        assert any(cmd.startswith('rm -rf "vcpkg"') for cmd in commands)
+        assert any("git clone" in cmd for cmd in commands)
+        assert any("checkout 2024.01.12" in cmd for cmd in commands)
+        assert any("bootstrap-vcpkg" in cmd for cmd in commands)
         assert any("vcpkg" in cmd and "install" in cmd for cmd in commands)
 
     def test_generate_no_vcpkg_json(self, tmp_path, monkeypatch):
