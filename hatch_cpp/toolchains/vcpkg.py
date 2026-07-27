@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 from platform import machine as platform_machine
 from sys import platform as sys_platform
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -40,7 +40,7 @@ VcpkgPlatformDefaults = {
 }
 
 
-def _read_vcpkg_ref_from_gitmodules(vcpkg_root: Path) -> Optional[str]:
+def _read_vcpkg_ref_from_gitmodules(vcpkg_root: Path) -> str | None:
     """Read the branch/ref for vcpkg from .gitmodules if it exists.
 
     Looks for a submodule whose path matches ``vcpkg_root`` and returns
@@ -61,11 +61,11 @@ def _read_vcpkg_ref_from_gitmodules(vcpkg_root: Path) -> Optional[str]:
 
 
 class HatchCppVcpkgConfiguration(BaseModel):
-    vcpkg: Optional[str] = Field(default="vcpkg.json")
-    vcpkg_root: Optional[Path] = Field(default=Path("vcpkg"))
-    vcpkg_repo: Optional[str] = Field(default="https://github.com/microsoft/vcpkg.git")
-    vcpkg_triplet: Optional[VcpkgTriplet] = Field(default=None)
-    vcpkg_ref: Optional[str] = Field(
+    vcpkg: str | None = Field(default="vcpkg.json")
+    vcpkg_root: Path | None = Field(default=Path("vcpkg"))
+    vcpkg_repo: str | None = Field(default="https://github.com/microsoft/vcpkg.git")
+    vcpkg_triplet: VcpkgTriplet | None = Field(default=None)
+    vcpkg_ref: str | None = Field(
         default=None,
         description="Branch, tag, or commit SHA to checkout after cloning vcpkg. "
         "If not set, falls back to the branch specified in .gitmodules for the vcpkg submodule.",
@@ -73,7 +73,7 @@ class HatchCppVcpkgConfiguration(BaseModel):
 
     # TODO: overlay
 
-    def _resolve_vcpkg_ref(self) -> Optional[str]:
+    def _resolve_vcpkg_ref(self) -> str | None:
         """Return the ref to checkout: explicit config takes priority, then .gitmodules."""
         if self.vcpkg_ref is not None:
             return self.vcpkg_ref
