@@ -82,7 +82,7 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
                 os_name = "linux"
             else:
                 os_name = "win"
-            if all([lib.py_limited_api for lib in build_plan.libraries]):
+            if all(lib.py_limited_api for lib in build_plan.libraries):
                 build_data["tag"] = f"cp{version_major}{version_minor}-abi3-{os_name}_{machine}"
             else:
                 build_data["tag"] = f"cp{version_major}{version_minor}-cp{version_major}{version_minor}-{os_name}_{machine}"
