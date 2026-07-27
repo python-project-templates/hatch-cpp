@@ -6,20 +6,20 @@ from re import match
 from shutil import which
 from sys import base_exec_prefix, exec_prefix, executable, platform as sys_platform
 from sysconfig import get_config_var, get_path
-from typing import Any, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 __all__ = (
+    "Binding",
     "BuildType",
     "CompilerToolchain",
-    "Toolchain",
-    "Language",
-    "Binding",
-    "Platform",
-    "PlatformDefaults",
     "HatchCppLibrary",
     "HatchCppPlatform",
+    "Language",
+    "Platform",
+    "PlatformDefaults",
+    "Toolchain",
     "_normalize_rpath",
 )
 
@@ -41,63 +41,62 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
     """A C++ library."""
 
     name: str
-    sources: List[str]
+    sources: list[str]
     language: Language = "c++"
 
     binding: Binding = "cpython"
-    std: Optional[str] = None
+    std: str | None = None
 
-    include_dirs: List[str] = Field(default_factory=list, alias=AliasChoices("include_dirs", "include-dirs"))
-    include_dirs_linux: List[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_linux", "include-dirs-linux"))
-    include_dirs_darwin: List[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_darwin", "include-dirs-darwin"))
-    include_dirs_win32: List[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_win32", "include-dirs-win32"))
+    include_dirs: list[str] = Field(default_factory=list, alias=AliasChoices("include_dirs", "include-dirs"))
+    include_dirs_linux: list[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_linux", "include-dirs-linux"))
+    include_dirs_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_darwin", "include-dirs-darwin"))
+    include_dirs_win32: list[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_win32", "include-dirs-win32"))
 
-    library_dirs: List[str] = Field(default_factory=list, alias=AliasChoices("library_dirs", "library-dirs"))
-    library_dirs_linux: List[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_linux", "library-dirs-linux"))
-    library_dirs_darwin: List[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_darwin", "library-dirs-darwin"))
-    library_dirs_win32: List[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_win32", "library-dirs-win32"))
+    library_dirs: list[str] = Field(default_factory=list, alias=AliasChoices("library_dirs", "library-dirs"))
+    library_dirs_linux: list[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_linux", "library-dirs-linux"))
+    library_dirs_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_darwin", "library-dirs-darwin"))
+    library_dirs_win32: list[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_win32", "library-dirs-win32"))
 
-    libraries: List[str] = Field(default_factory=list)
-    libraries_linux: List[str] = Field(default_factory=list, alias=AliasChoices("libraries_linux", "libraries-linux"))
-    libraries_darwin: List[str] = Field(default_factory=list, alias=AliasChoices("libraries_darwin", "libraries-darwin"))
-    libraries_win32: List[str] = Field(default_factory=list, alias=AliasChoices("libraries_win32", "libraries-win32"))
+    libraries: list[str] = Field(default_factory=list)
+    libraries_linux: list[str] = Field(default_factory=list, alias=AliasChoices("libraries_linux", "libraries-linux"))
+    libraries_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("libraries_darwin", "libraries-darwin"))
+    libraries_win32: list[str] = Field(default_factory=list, alias=AliasChoices("libraries_win32", "libraries-win32"))
 
-    extra_compile_args: List[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args", "extra-compile-args"))
-    extra_compile_args_linux: List[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_linux", "extra-compile-args-linux"))
-    extra_compile_args_darwin: List[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_darwin", "extra-compile-args-darwin"))
-    extra_compile_args_win32: List[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_win32", "extra-compile-args-win32"))
+    extra_compile_args: list[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args", "extra-compile-args"))
+    extra_compile_args_linux: list[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_linux", "extra-compile-args-linux"))
+    extra_compile_args_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_darwin", "extra-compile-args-darwin"))
+    extra_compile_args_win32: list[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_win32", "extra-compile-args-win32"))
 
-    extra_link_args: List[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args", "extra-link-args"))
-    extra_link_args_linux: List[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_linux", "extra-link-args-linux"))
-    extra_link_args_darwin: List[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_darwin", "extra-link-args-darwin"))
-    extra_link_args_win32: List[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_win32", "extra-link-args-win32"))
+    extra_link_args: list[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args", "extra-link-args"))
+    extra_link_args_linux: list[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_linux", "extra-link-args-linux"))
+    extra_link_args_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_darwin", "extra-link-args-darwin"))
+    extra_link_args_win32: list[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_win32", "extra-link-args-win32"))
 
-    extra_objects: List[str] = Field(default_factory=list, alias=AliasChoices("extra_objects", "extra-objects"))
-    extra_objects_linux: List[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_linux", "extra-objects-linux"))
-    extra_objects_darwin: List[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_darwin", "extra-objects-darwin"))
-    extra_objects_win32: List[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_win32", "extra-objects-win32"))
+    extra_objects: list[str] = Field(default_factory=list, alias=AliasChoices("extra_objects", "extra-objects"))
+    extra_objects_linux: list[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_linux", "extra-objects-linux"))
+    extra_objects_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_darwin", "extra-objects-darwin"))
+    extra_objects_win32: list[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_win32", "extra-objects-win32"))
 
-    define_macros: List[str] = Field(default_factory=list, alias=AliasChoices("define_macros", "define-macros"))
-    define_macros_linux: List[str] = Field(default_factory=list, alias=AliasChoices("define_macros_linux", "define-macros-linux"))
-    define_macros_darwin: List[str] = Field(default_factory=list, alias=AliasChoices("define_macros_darwin", "define-macros-darwin"))
-    define_macros_win32: List[str] = Field(default_factory=list, alias=AliasChoices("define_macros_win32", "define-macros-win32"))
+    define_macros: list[str] = Field(default_factory=list, alias=AliasChoices("define_macros", "define-macros"))
+    define_macros_linux: list[str] = Field(default_factory=list, alias=AliasChoices("define_macros_linux", "define-macros-linux"))
+    define_macros_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("define_macros_darwin", "define-macros-darwin"))
+    define_macros_win32: list[str] = Field(default_factory=list, alias=AliasChoices("define_macros_win32", "define-macros-win32"))
 
-    undef_macros: List[str] = Field(default_factory=list, alias=AliasChoices("undef_macros", "undef-macros"))
-    undef_macros_linux: List[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_linux", "undef-macros-linux"))
-    undef_macros_darwin: List[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_darwin", "undef-macros-darwin"))
-    undef_macros_win32: List[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_win32", "undef-macros-win32"))
+    undef_macros: list[str] = Field(default_factory=list, alias=AliasChoices("undef_macros", "undef-macros"))
+    undef_macros_linux: list[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_linux", "undef-macros-linux"))
+    undef_macros_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_darwin", "undef-macros-darwin"))
+    undef_macros_win32: list[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_win32", "undef-macros-win32"))
 
-    export_symbols: List[str] = Field(default_factory=list, alias=AliasChoices("export_symbols", "export-symbols"))
-    depends: List[str] = Field(default_factory=list)
+    export_symbols: list[str] = Field(default_factory=list, alias=AliasChoices("export_symbols", "export-symbols"))
+    depends: list[str] = Field(default_factory=list)
 
-    py_limited_api: Optional[str] = Field(default="", alias=AliasChoices("py_limited_api", "py-limited-api"))
+    py_limited_api: str | None = Field(default="", alias=AliasChoices("py_limited_api", "py-limited-api"))
 
     @field_validator("py_limited_api", mode="before")
     @classmethod
     def check_py_limited_api(cls, value: Any) -> Any:
-        if value:
-            if not match(r"cp3\d", value):
-                raise ValueError("py-limited-api must be in the form of cp3X")
+        if value and not match(r"cp3\d", value):
+            raise ValueError("py-limited-api must be in the form of cp3X")
         return value
 
     def get_qualified_name(self, platform):
@@ -122,7 +121,7 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
             raise ValueError("Generic binding can not support Py_LIMITED_API")
         return self
 
-    def get_effective_link_args(self, platform: Platform) -> List[str]:
+    def get_effective_link_args(self, platform: Platform) -> list[str]:
         """Get link args merged with platform-specific link args."""
         args = list(self.extra_link_args)
         if platform == "linux":
@@ -133,7 +132,7 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
             args.extend(self.extra_link_args_win32)
         return args
 
-    def get_effective_include_dirs(self, platform: Platform) -> List[str]:
+    def get_effective_include_dirs(self, platform: Platform) -> list[str]:
         """Get include dirs merged with platform-specific include dirs."""
         dirs = list(self.include_dirs)
         if platform == "linux":
@@ -144,7 +143,7 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
             dirs.extend(self.include_dirs_win32)
         return dirs
 
-    def get_effective_library_dirs(self, platform: Platform) -> List[str]:
+    def get_effective_library_dirs(self, platform: Platform) -> list[str]:
         """Get library dirs merged with platform-specific library dirs."""
         dirs = list(self.library_dirs)
         if platform == "linux":
@@ -155,7 +154,7 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
             dirs.extend(self.library_dirs_win32)
         return dirs
 
-    def get_effective_libraries(self, platform: Platform) -> List[str]:
+    def get_effective_libraries(self, platform: Platform) -> list[str]:
         """Get libraries merged with platform-specific libraries."""
         libs = list(self.libraries)
         if platform == "linux":
@@ -166,7 +165,7 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
             libs.extend(self.libraries_win32)
         return libs
 
-    def get_effective_compile_args(self, platform: Platform) -> List[str]:
+    def get_effective_compile_args(self, platform: Platform) -> list[str]:
         """Get compile args merged with platform-specific compile args."""
         args = list(self.extra_compile_args)
         if platform == "linux":
@@ -177,7 +176,7 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
             args.extend(self.extra_compile_args_win32)
         return args
 
-    def get_effective_extra_objects(self, platform: Platform) -> List[str]:
+    def get_effective_extra_objects(self, platform: Platform) -> list[str]:
         """Get extra objects merged with platform-specific extra objects."""
         objs = list(self.extra_objects)
         if platform == "linux":
@@ -188,7 +187,7 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
             objs.extend(self.extra_objects_win32)
         return objs
 
-    def get_effective_define_macros(self, platform: Platform) -> List[str]:
+    def get_effective_define_macros(self, platform: Platform) -> list[str]:
         """Get define macros merged with platform-specific define macros."""
         macros = list(self.define_macros)
         if platform == "linux":
@@ -199,7 +198,7 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
             macros.extend(self.define_macros_win32)
         return macros
 
-    def get_effective_undef_macros(self, platform: Platform) -> List[str]:
+    def get_effective_undef_macros(self, platform: Platform) -> list[str]:
         """Get undef macros merged with platform-specific undef macros."""
         macros = list(self.undef_macros)
         if platform == "linux":
@@ -274,12 +273,11 @@ class HatchCppPlatform(BaseModel):
     @classmethod
     def validate_model(cls, data, handler):
         model = handler(data)
-        if which("ccache") and not model.disable_ccache:
-            if model.toolchain in ["gcc", "clang"]:
-                if not model.cc.startswith("ccache "):
-                    model.cc = f"ccache {model.cc}"
-                if not model.cxx.startswith("ccache "):
-                    model.cxx = f"ccache {model.cxx}"
+        if which("ccache") and not model.disable_ccache and model.toolchain in ["gcc", "clang"]:
+            if not model.cc.startswith("ccache "):
+                model.cc = f"ccache {model.cc}"
+            if not model.cxx.startswith("ccache "):
+                model.cxx = f"ccache {model.cxx}"
         return model
 
     @staticmethod
@@ -316,7 +314,7 @@ class HatchCppPlatform(BaseModel):
             if not library.std:
                 library.std = "c++17"
             library.sources.append(str(Path(nanobind.include_dir()).parent / "src" / "nb_combined.cpp"))
-            effective_include_dirs.append(str((Path(nanobind.include_dir()).parent / "ext" / "robin_map" / "include")))
+            effective_include_dirs.append(str(Path(nanobind.include_dir()).parent / "ext" / "robin_map" / "include"))
 
         if library.py_limited_api:
             if library.binding == "pybind11":
@@ -367,20 +365,7 @@ class HatchCppPlatform(BaseModel):
         # Normalize rpath values ($ORIGIN <-> @loader_path) and escape for shell
         effective_link_args = [_normalize_rpath(arg, self.platform) for arg in effective_link_args]
 
-        if self.toolchain == "gcc":
-            flags += " -shared"
-            flags += " " + " ".join(effective_link_args)
-            flags += " " + " ".join(effective_extra_objects)
-            flags += " " + " ".join(f"-l{lib}" for lib in effective_libraries)
-            flags += " " + " ".join(f"-L{lib}" for lib in effective_library_dirs)
-            flags += f" -o {library.get_qualified_name(self.platform)}"
-            if self.platform == "darwin":
-                flags += " -undefined dynamic_lookup"
-            if "mold" in self.ld:
-                flags += f" -fuse-ld={self.ld}"
-            elif "lld" in self.ld:
-                flags += " -fuse-ld=lld"
-        elif self.toolchain == "clang":
+        if self.toolchain == "gcc" or self.toolchain == "clang":
             flags += " -shared"
             flags += " " + " ".join(effective_link_args)
             flags += " " + " ".join(effective_extra_objects)
@@ -411,7 +396,7 @@ class HatchCppPlatform(BaseModel):
             ]
             for libs_path in python_libs_paths:
                 if libs_path.exists():
-                    flags += f" /LIBPATH:{str(libs_path)}"
+                    flags += f" /LIBPATH:{libs_path!s}"
                     break
             flags += " " + " ".join(f"{lib}.lib" for lib in effective_libraries)
             flags += " " + " ".join(f"/LIBPATH:{lib}" for lib in effective_library_dirs)

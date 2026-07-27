@@ -14,7 +14,6 @@ class TestProject:
         [
             "test_project_basic",
             "test_project_override_classes",
-            "test_project_override_classes",
             "test_project_override_toolchain",
             "test_project_pybind",
             "test_project_pybind_vcpkg",

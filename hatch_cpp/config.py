@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from os import environ, system as system_call
 from pathlib import Path
-from typing import List, Optional
 
 from pkn import getSimpleLogger
 from pydantic import BaseModel, Field, model_validator
@@ -21,13 +20,13 @@ log = getSimpleLogger("hatch_cpp")
 class HatchCppBuildConfig(BaseModel):
     """Build config values for Hatch C++ Builder."""
 
-    verbose: Optional[bool] = Field(default=False)
-    skip: Optional[bool] = Field(default=False)
-    name: Optional[str] = Field(default=None)
-    libraries: List[HatchCppLibrary] = Field(default_factory=list)
-    cmake: Optional[HatchCppCmakeConfiguration] = Field(default=None)
-    platform: Optional[HatchCppPlatform] = Field(default_factory=HatchCppPlatform.default)
-    vcpkg: Optional[HatchCppVcpkgConfiguration] = Field(default_factory=HatchCppVcpkgConfiguration)
+    verbose: bool | None = Field(default=False)
+    skip: bool | None = Field(default=False)
+    name: str | None = Field(default=None)
+    libraries: list[HatchCppLibrary] = Field(default_factory=list)
+    cmake: HatchCppCmakeConfiguration | None = Field(default=None)
+    platform: HatchCppPlatform | None = Field(default_factory=HatchCppPlatform.default)
+    vcpkg: HatchCppVcpkgConfiguration | None = Field(default_factory=HatchCppVcpkgConfiguration)
 
     @model_validator(mode="wrap")
     @classmethod
@@ -56,9 +55,9 @@ class HatchCppBuildConfig(BaseModel):
 
 class HatchCppBuildPlan(HatchCppBuildConfig):
     build_type: BuildType = "release"
-    commands: List[str] = Field(default_factory=list)
+    commands: list[str] = Field(default_factory=list)
 
-    _active_toolchains: List[Toolchain] = []
+    _active_toolchains: list[Toolchain] = []
 
     def generate(self):
         self.commands = []
