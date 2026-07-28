@@ -87,6 +87,11 @@ class HatchCppVcpkgConfiguration(BaseModel):
             return self.vcpkg_root / "vcpkg.exe"
         return self.vcpkg_root / "vcpkg"
 
+    def _command_path(self, path: Path) -> str:
+        if sys_platform == "win32":
+            return str(path).replace("/", "\\")
+        return f"./{path}"
+
     def _delete_dir_command(self, path: Path) -> str:
         if sys_platform == "win32":
             return f'rmdir /s /q "{path}"'
@@ -109,7 +114,7 @@ class HatchCppVcpkgConfiguration(BaseModel):
         if ref is not None:
             commands.append(f"git -C {self.vcpkg_root} checkout {ref}")
 
-        commands.append(f"./{self._bootstrap_script_path()}")
+        commands.append(self._command_path(self._bootstrap_script_path()))
         return commands
 
     def generate(self, config):
@@ -134,11 +139,11 @@ class HatchCppVcpkgConfiguration(BaseModel):
                 else:
                     vcpkg_executable = self._vcpkg_executable_path()
                     if not vcpkg_executable.exists():
-                        commands.append(f"./{bootstrap_script}")
+                        commands.append(self._command_path(bootstrap_script))
                     elif not self._is_vcpkg_working():
                         commands.append(self._delete_dir_command(vcpkg_root))
                         commands.extend(self._clone_checkout_bootstrap_commands())
 
-            commands.append(f"./{self.vcpkg_root / 'vcpkg'} install --triplet {self.vcpkg_triplet}")
+            commands.append(f"{self._command_path(self._vcpkg_executable_path())} install --triplet {self.vcpkg_triplet}")
 
         return commands

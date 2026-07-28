@@ -153,6 +153,27 @@ class TestVcpkgGenerate:
         assert not any("checkout" in cmd for cmd in commands)
         assert any("git clone" in cmd for cmd in commands)
 
+    def test_generate_uses_posix_command_paths(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        self._make_vcpkg_env(tmp_path)
+
+        cfg = HatchCppVcpkgConfiguration(vcpkg_triplet="x64-linux")
+        commands = cfg.generate(None)
+
+        assert "./vcpkg/bootstrap-vcpkg.sh" in commands
+        assert "./vcpkg/vcpkg install --triplet x64-linux" in commands
+
+    def test_generate_uses_windows_command_paths(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr("hatch_cpp.toolchains.vcpkg.sys_platform", "win32")
+        self._make_vcpkg_env(tmp_path)
+
+        cfg = HatchCppVcpkgConfiguration(vcpkg_triplet="x64-windows-static-md")
+        commands = cfg.generate(None)
+
+        assert r"vcpkg\bootstrap-vcpkg.bat" in commands
+        assert r"vcpkg\vcpkg.exe install --triplet x64-windows-static-md" in commands
+
     def test_generate_skips_clone_when_vcpkg_root_exists(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         self._make_vcpkg_env(tmp_path)
