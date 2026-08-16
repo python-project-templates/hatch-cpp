@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from hatch_cpp.toolchains.vcpkg import (
     HatchCppVcpkgConfiguration,
@@ -86,6 +87,10 @@ class TestVcpkgRefConfig:
     def test_linux_arm64_triplet(self):
         cfg = HatchCppVcpkgConfiguration(vcpkg_triplet="arm64-linux")
         assert cfg.vcpkg_triplet == "arm64-linux"
+
+    def test_emscripten_triplet(self):
+        cfg = HatchCppVcpkgConfiguration(vcpkg_triplet="wasm32-emscripten")
+        assert cfg.vcpkg_triplet == "wasm32-emscripten"
 
 
 class TestResolveVcpkgRef:
@@ -177,6 +182,16 @@ class TestVcpkgGenerate:
         commands = cfg.generate(None)
 
         assert "./vcpkg/vcpkg install --triplet arm64-linux" in commands
+
+    def test_generate_detects_emscripten_triplet(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        self._make_vcpkg_env(tmp_path)
+        build_plan = SimpleNamespace(platform=SimpleNamespace(platform="emscripten"))
+
+        cfg = HatchCppVcpkgConfiguration()
+        commands = cfg.generate(build_plan)
+
+        assert "./vcpkg/vcpkg install --triplet wasm32-emscripten" in commands
 
     def test_generate_uses_windows_command_paths(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)

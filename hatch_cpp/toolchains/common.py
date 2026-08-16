@@ -4,7 +4,7 @@ from os import environ
 from pathlib import Path
 from re import match
 from shutil import which
-from sys import base_exec_prefix, exec_prefix, executable, platform as sys_platform
+from sys import base_exec_prefix, exec_prefix, executable, platform as sys_platform, version_info
 from sysconfig import get_config_var, get_path
 from typing import Any, Literal
 
@@ -29,11 +29,12 @@ CompilerToolchain = Literal["gcc", "clang", "msvc"]
 Toolchain = Literal["vcpkg", "cmake", "vanilla"]
 Language = Literal["c", "c++"]
 Binding = Literal["cpython", "pybind11", "nanobind", "generic"]
-Platform = Literal["linux", "darwin", "win32"]
+Platform = Literal["linux", "darwin", "win32", "emscripten"]
 PlatformDefaults = {
     "linux": {"CC": "gcc", "CXX": "g++", "LD": "ld"},
     "darwin": {"CC": "clang", "CXX": "clang++", "LD": "ld"},
     "win32": {"CC": "cl", "CXX": "cl", "LD": "link"},
+    "emscripten": {"CC": "emcc", "CXX": "em++", "LD": "wasm-ld"},
 }
 
 
@@ -100,6 +101,10 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
         return value
 
     def get_qualified_name(self, platform):
+        if platform == "emscripten":
+            if self.binding == "generic":
+                return f"{self.name}.wasm"
+            return f"{self.name}.cpython-{version_info.major}{version_info.minor}-wasm32-emscripten.so"
         if self.binding == "cpython" and not self.py_limited_api:
             suffix = get_config_var("EXT_SUFFIX")
             return f"{self.name}{suffix}"
@@ -242,9 +247,10 @@ class HatchCppPlatform(BaseModel):
 
     @staticmethod
     def default() -> HatchCppPlatform:
-        CC = environ.get("CC", PlatformDefaults[sys_platform]["CC"])
-        CXX = environ.get("CXX", PlatformDefaults[sys_platform]["CXX"])
-        LD = environ.get("LD", PlatformDefaults[sys_platform]["LD"])
+        platform = "emscripten" if environ.get("PYODIDE_ABI_VERSION") else sys_platform
+        CC = environ.get("CC", PlatformDefaults[platform]["CC"])
+        CXX = environ.get("CXX", PlatformDefaults[platform]["CXX"])
+        LD = environ.get("LD", PlatformDefaults[platform]["LD"])
         if "gcc" in CC and "g++" in CXX:
             toolchain = "gcc"
         elif "clang" in CC and "clang++" in CXX:
@@ -252,11 +258,11 @@ class HatchCppPlatform(BaseModel):
         elif "cl" in CC and "cl" in CXX:
             toolchain = "msvc"
         # Fallback to platform defaults
-        elif sys_platform == "linux":
+        elif platform == "linux":
             toolchain = "gcc"
-        elif sys_platform == "darwin":
+        elif platform in ("darwin", "emscripten"):
             toolchain = "clang"
-        elif sys_platform == "win32":
+        elif platform == "win32":
             toolchain = "msvc"
         else:
             toolchain = "gcc"
@@ -267,13 +273,13 @@ class HatchCppPlatform(BaseModel):
         #     LD = which("ld.mold")
         # elif which("ld.lld"):
         #     LD = which("ld.lld")
-        return HatchCppPlatform(cc=CC, cxx=CXX, ld=LD, platform=sys_platform, toolchain=toolchain)
+        return HatchCppPlatform(cc=CC, cxx=CXX, ld=LD, platform=platform, toolchain=toolchain)
 
     @model_validator(mode="wrap")
     @classmethod
     def validate_model(cls, data, handler):
         model = handler(data)
-        if which("ccache") and not model.disable_ccache and model.toolchain in ["gcc", "clang"]:
+        if which("ccache") and model.platform != "emscripten" and not model.disable_ccache and model.toolchain in ["gcc", "clang"]:
             if not model.cc.startswith("ccache "):
                 model.cc = f"ccache {model.cc}"
             if not model.cxx.startswith("ccache "):
@@ -324,7 +330,8 @@ class HatchCppPlatform(BaseModel):
         # Toolchain-specific flags
         if self.toolchain == "gcc":
             flags += " " + " ".join(f"-I{d}" for d in effective_include_dirs)
-            flags += " -fPIC"
+            if self.platform != "emscripten":
+                flags += " -fPIC"
             flags += " " + " ".join(effective_compile_args)
             flags += " " + " ".join(f"-D{macro}" for macro in effective_define_macros)
             flags += " " + " ".join(f"-U{macro}" for macro in effective_undef_macros)
@@ -332,7 +339,8 @@ class HatchCppPlatform(BaseModel):
                 flags += f" -std={library.std}"
         elif self.toolchain == "clang":
             flags += " ".join(f"-I{d}" for d in effective_include_dirs)
-            flags += " -fPIC"
+            if self.platform != "emscripten":
+                flags += " -fPIC"
             flags += " " + " ".join(effective_compile_args)
             flags += " " + " ".join(f"-D{macro}" for macro in effective_define_macros)
             flags += " " + " ".join(f"-U{macro}" for macro in effective_undef_macros)

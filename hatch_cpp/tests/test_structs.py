@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from toml import loads
 
 from hatch_cpp import HatchCppBuildConfig, HatchCppBuildPlan, HatchCppLibrary, HatchCppPlatform
+from hatch_cpp.plugin import _wheel_tag
 from hatch_cpp.toolchains.common import _normalize_rpath
 
 
@@ -57,6 +58,54 @@ class TestStructs:
         assert "clang" in hatch_build_config.platform.cc
         assert "clang++" in hatch_build_config.platform.cxx
         assert hatch_build_config.platform.toolchain == "gcc"
+
+    def test_pyodide_platform(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("PYODIDE_ABI_VERSION", "2026_0")
+        monkeypatch.setenv("CC", "/toolchain/cc")
+        monkeypatch.setenv("CXX", "/toolchain/c++")
+
+        platform = HatchCppPlatform.default()
+        library = HatchCppLibrary(name="project/extension", sources=["extension.cpp"], binding="pybind11")
+
+        assert platform.platform == "emscripten"
+        assert platform.toolchain == "clang"
+        assert platform.cc == "/toolchain/cc"
+        assert platform.cxx == "/toolchain/c++"
+        assert library.get_qualified_name(platform.platform) == (
+            f"project/extension.cpython-{version_info.major}{version_info.minor}-wasm32-emscripten.so"
+        )
+        assert "-undefined dynamic_lookup" not in platform.get_link_flags(library)
+
+    def test_pyodide_wheel_tag(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("PYODIDE_ABI_VERSION", "2026_0")
+
+        assert _wheel_tag("emscripten", "wasm32", 3, 14, False) == "cp314-cp314-pyemscripten_2026_0_wasm32"
+
+    def test_pyodide_wheel_tag_requires_abi_version(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.delenv("PYODIDE_ABI_VERSION", raising=False)
+
+        with pytest.raises(ValueError, match="PYODIDE_ABI_VERSION"):
+            _wheel_tag("emscripten", "wasm32", 3, 14, False)
+
+    def test_pyodide_build_plan_compiles_objects_before_linking(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("PYODIDE_ABI_VERSION", "2026_0")
+        monkeypatch.setenv("CC", "/toolchain/cc")
+        monkeypatch.setenv("CXX", "/toolchain/c++")
+        build_plan = HatchCppBuildPlan(
+            name="pyodide-project",
+            libraries=[HatchCppLibrary(name="pyodide_project/extension", sources=["cpp/extension.cpp"], binding="pybind11")],
+            vcpkg=None,
+        )
+
+        build_plan.generate()
+
+        assert len(build_plan.commands) == 2
+        assert build_plan.commands[0].startswith("/toolchain/c++ -c cpp/extension.cpp ")
+        assert build_plan.commands[0].endswith(" -o build/hatch-cpp/0-0-extension.o")
+        assert build_plan.commands[1].startswith("/toolchain/c++ build/hatch-cpp/0-0-extension.o ")
+        assert build_plan.commands[1].endswith(
+            f" -shared -o pyodide_project/extension.cpython-{version_info.major}{version_info.minor}-wasm32-emscripten.so"
+        )
 
     def test_cmake_args_env_variable(self):
         """Test that CMAKE_ARGS environment variable is respected."""

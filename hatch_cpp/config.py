@@ -93,12 +93,19 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
             if "vcpkg" in self._active_toolchains:
                 log.warning("vcpkg toolchain is active; ensure that your compiler is configured to use vcpkg includes and libs.")
 
-            for library in self.libraries:
+            for library_index, library in enumerate(self.libraries):
                 compile_flags = self.platform.get_compile_flags(library, self.build_type)
                 link_flags = self.platform.get_link_flags(library, self.build_type)
-                self.commands.append(
-                    f"{self.platform.cc if library.language == 'c' else self.platform.cxx} {' '.join(library.sources)} {compile_flags} {link_flags}"
-                )
+                compiler = self.platform.cc if library.language == "c" else self.platform.cxx
+                if self.platform.platform == "emscripten":
+                    objects = []
+                    for source_index, source in enumerate(library.sources):
+                        obj = Path("build/hatch-cpp") / f"{library_index}-{source_index}-{Path(source).stem}.o"
+                        objects.append(str(obj))
+                        self.commands.append(f"{compiler} -c {source} {compile_flags} -o {obj}")
+                    self.commands.append(f"{compiler} {' '.join(objects)} {link_flags}")
+                else:
+                    self.commands.append(f"{compiler} {' '.join(library.sources)} {compile_flags} {link_flags}")
 
         if "cmake" in self._active_toolchains:
             self.commands.extend(self.cmake.generate(self))
@@ -106,6 +113,8 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
         return self.commands
 
     def execute(self):
+        if self.platform.platform == "emscripten" and "vanilla" in self._active_toolchains:
+            Path("build/hatch-cpp").mkdir(parents=True, exist_ok=True)
         for command in self.commands:
             ret = system_call(command)
             if ret != 0:

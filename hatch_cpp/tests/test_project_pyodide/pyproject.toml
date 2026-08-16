@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling>=1.20"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hatch-cpp-test-project-pyodide"
+version = "0.1.0"
+requires-python = ">=3.14"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pyodide_project"]
+
+[tool.hatch.build.hooks.hatch-cpp]
+verbose = true
+libraries = [
+    {name = "pyodide_project/extension", sources = ["cpp/extension.cpp"], binding = "pybind11"},
+]
+
+[tool.cibuildwheel.pyodide]
+test-command = "python -c 'from pyodide_project import answer; assert answer() == 42'"
