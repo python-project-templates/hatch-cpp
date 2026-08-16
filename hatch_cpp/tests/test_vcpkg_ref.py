@@ -83,6 +83,10 @@ class TestVcpkgRefConfig:
         cfg = HatchCppVcpkgConfiguration(vcpkg_ref=sha)
         assert cfg.vcpkg_ref == sha
 
+    def test_linux_arm64_triplet(self):
+        cfg = HatchCppVcpkgConfiguration(vcpkg_triplet="arm64-linux")
+        assert cfg.vcpkg_triplet == "arm64-linux"
+
 
 class TestResolveVcpkgRef:
     """Tests for _resolve_vcpkg_ref priority logic."""
@@ -162,6 +166,17 @@ class TestVcpkgGenerate:
 
         assert "./vcpkg/bootstrap-vcpkg.sh" in commands
         assert "./vcpkg/vcpkg install --triplet x64-linux" in commands
+
+    def test_generate_detects_linux_arm64_triplet(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr("hatch_cpp.toolchains.vcpkg.sys_platform", "linux")
+        monkeypatch.setattr("hatch_cpp.toolchains.vcpkg.platform_machine", lambda: "aarch64")
+        self._make_vcpkg_env(tmp_path)
+
+        cfg = HatchCppVcpkgConfiguration()
+        commands = cfg.generate(None)
+
+        assert "./vcpkg/vcpkg install --triplet arm64-linux" in commands
 
     def test_generate_uses_windows_command_paths(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
