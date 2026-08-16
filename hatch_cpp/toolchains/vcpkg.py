@@ -29,6 +29,7 @@ VcpkgTriplet = Literal[
     "arm64-uwp",
     "arm64-windows",
     "arm64-windows-static-md",
+    "wasm32-emscripten",
 ]
 VcpkgPlatformDefaults = {
     ("linux", "x86_64"): "x64-linux",
@@ -38,6 +39,7 @@ VcpkgPlatformDefaults = {
     ("win32", "x86_64"): "x64-windows-static-md",
     ("win32", "AMD64"): "x64-windows-static-md",
     ("win32", "arm64"): "arm64-windows-static-md",
+    ("emscripten", "wasm32"): "wasm32-emscripten",
 }
 
 
@@ -122,9 +124,11 @@ class HatchCppVcpkgConfiguration(BaseModel):
         commands = []
 
         if self.vcpkg_triplet is None:
-            self.vcpkg_triplet = VcpkgPlatformDefaults.get((sys_platform, platform_machine()))
+            platform = config.platform.platform if config is not None else sys_platform
+            machine = "wasm32" if platform == "emscripten" else platform_machine()
+            self.vcpkg_triplet = VcpkgPlatformDefaults.get((platform, machine))
             if self.vcpkg_triplet is None:
-                raise ValueError(f"Could not determine vcpkg triplet for platform {sys_platform} and architecture {platform_machine()}")
+                raise ValueError(f"Could not determine vcpkg triplet for platform {platform} and architecture {machine}")
 
         if self.vcpkg and Path(self.vcpkg).exists():
             vcpkg_root = Path(self.vcpkg_root)

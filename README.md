@@ -181,5 +181,21 @@ options:
 
 `hatch-cpp` will respect standard environment variables for compiler control, e.g. `CC`, `CXX`, `LD`, `CMAKE_GENERATOR`, `OSX_DEPLOYMENT_TARGET`, etc.
 
+### Pyodide
+
+Pyodide builds are detected from `PYODIDE_ABI_VERSION`. The hook preserves Pyodide's Emscripten compiler wrappers, gives extension modules CPython's Emscripten suffix, and emits the corresponding `pyemscripten` wheel platform tag. No project-specific build hook is required.
+
+```toml
+[tool.hatch.build.hooks.hatch-cpp]
+libraries = [
+    {name = "project/extension", sources = ["cpp/extension.cpp"], binding = "pybind11"},
+]
+
+[tool.cibuildwheel.pyodide]
+test-command = "python -c 'from project.extension import answer; assert answer() == 42'"
+```
+
+When a `vcpkg.json` manifest is active, Emscripten builds use vcpkg's `wasm32-emscripten` community triplet. Package support varies by port.
+
 > [!NOTE]
 > This library was generated using [copier](https://copier.readthedocs.io/en/stable/) from the [Base Python Project Template repository](https://github.com/python-project-templates/base).

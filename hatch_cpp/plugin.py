@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from os import environ
 from pathlib import Path
 from platform import machine as platform_machine
-from sys import platform as sys_platform, version_info
+from sys import version_info
 from typing import Any
 
 from hatch_build import parse_extra_args_model
@@ -12,6 +13,23 @@ from .config import HatchCppBuildConfig, HatchCppBuildPlan, log
 from .utils import import_string
 
 __all__ = ("HatchCppBuildHook",)
+
+
+def _wheel_tag(platform: str, machine: str, version_major: int, version_minor: int, abi3: bool) -> str:
+    if platform == "emscripten":
+        abi_version = environ.get("PYODIDE_ABI_VERSION")
+        if not abi_version:
+            raise ValueError("PYODIDE_ABI_VERSION is required for Emscripten wheel tags.")
+        return f"cp{version_major}{version_minor}-cp{version_major}{version_minor}-pyemscripten_{abi_version}_wasm32"
+
+    if platform == "darwin":
+        os_name = "macosx_11_0"
+    elif platform == "linux":
+        os_name = "linux"
+    else:
+        os_name = "win"
+    abi = "abi3" if abi3 else f"cp{version_major}{version_minor}"
+    return f"cp{version_major}{version_minor}-{abi}-{os_name}_{machine}"
 
 
 class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
@@ -76,29 +94,19 @@ class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
             machine = platform_machine()
             version_major = version_info.major
             version_minor = version_info.minor
-            if "darwin" in sys_platform:
-                os_name = "macosx_11_0"
-            elif "linux" in sys_platform:
-                os_name = "linux"
-            else:
-                os_name = "win"
-            if all(lib.py_limited_api for lib in build_plan.libraries):
-                build_data["tag"] = f"cp{version_major}{version_minor}-abi3-{os_name}_{machine}"
-            else:
-                build_data["tag"] = f"cp{version_major}{version_minor}-cp{version_major}{version_minor}-{os_name}_{machine}"
+            build_data["tag"] = _wheel_tag(
+                build_plan.platform.platform,
+                machine,
+                version_major,
+                version_minor,
+                all(lib.py_limited_api for lib in build_plan.libraries),
+            )
         else:
             build_data["pure_python"] = False
             machine = platform_machine()
             version_major = version_info.major
             version_minor = version_info.minor
-            # TODO abi3
-            if "darwin" in sys_platform:
-                os_name = "macosx_11_0"
-            elif "linux" in sys_platform:
-                os_name = "linux"
-            else:
-                os_name = "win"
-            build_data["tag"] = f"cp{version_major}{version_minor}-cp{version_major}{version_minor}-{os_name}_{machine}"
+            build_data["tag"] = _wheel_tag(build_plan.platform.platform, machine, version_major, version_minor, False)
 
             # force include libraries
             for path in Path(".").rglob("*"):
