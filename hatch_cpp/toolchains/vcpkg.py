@@ -24,6 +24,7 @@ VcpkgTriplet = Literal[
     "x86-windows",
     "arm-neon-android",
     "arm64-android",
+    "arm64-linux",
     "arm64-osx",
     "arm64-uwp",
     "arm64-windows",
@@ -31,7 +32,7 @@ VcpkgTriplet = Literal[
 ]
 VcpkgPlatformDefaults = {
     ("linux", "x86_64"): "x64-linux",
-    # ("linux", "arm64"): "",
+    ("linux", "aarch64"): "arm64-linux",
     ("darwin", "x86_64"): "x64-osx",
     ("darwin", "arm64"): "arm64-osx",
     ("win32", "x86_64"): "x64-windows-static-md",
