@@ -146,12 +146,7 @@ hatch_cpp/labextension
 
 # Emscripten SDK (locally installed)
 emsdk
-<<<<<<< before updating
-.pyodide_build
-.venv-pyodide
-=======
 .pyodide_build/
->>>>>>> after updating
 
 # Mac
 .DS_Store
