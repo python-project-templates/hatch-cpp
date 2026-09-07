@@ -28,6 +28,8 @@ def _wheel_tag(platform: str, machine: str, version_major: int, version_minor: i
         os_name = "linux"
     else:
         os_name = "win"
+    # platform.machine() reports AMD64/ARM64 on Windows, but PEP 425 platform tags are lowercase
+    machine = machine.lower()
     abi = "abi3" if abi3 else f"cp{version_major}{version_minor}"
     return f"cp{version_major}{version_minor}-{abi}-{os_name}_{machine}"
 

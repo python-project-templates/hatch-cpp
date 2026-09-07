@@ -87,6 +87,11 @@ class TestStructs:
         with pytest.raises(ValueError, match="PYODIDE_ABI_VERSION"):
             _wheel_tag("emscripten", "wasm32", 3, 14, False)
 
+    def test_wheel_tag_machine_is_lowercased(self):
+        assert _wheel_tag("win32", "AMD64", 3, 11, False) == "cp311-cp311-win_amd64"
+        assert _wheel_tag("win32", "ARM64", 3, 11, True) == "cp311-abi3-win_arm64"
+        assert _wheel_tag("linux", "x86_64", 3, 11, False) == "cp311-cp311-linux_x86_64"
+
     def test_pyodide_build_plan_compiles_objects_before_linking(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setenv("PYODIDE_ABI_VERSION", "2026_0")
         monkeypatch.setenv("CC", "/toolchain/cc")
