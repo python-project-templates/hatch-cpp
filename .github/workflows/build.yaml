@@ -25,16 +25,12 @@ permissions:
 
 jobs:
   build:
-<<<<<<< before updating
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]
         python-version: ["3.11", "3.12", "3.13"]
-=======
-    runs-on: ubuntu-24.04
->>>>>>> after updating
 
     steps:
       - name: Checkout
