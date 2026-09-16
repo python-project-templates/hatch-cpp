@@ -34,7 +34,7 @@ def _wheel_tag(platform: str, machine: str, version_major: int, version_minor: i
     return f"cp{version_major}{version_minor}-{abi}-{os_name}_{machine}"
 
 
-class HatchCppBuildHook(BuildHookInterface[HatchCppBuildConfig]):
+class HatchCppBuildHook(BuildHookInterface):
     """The hatch-cpp build hook."""
 
     PLUGIN_NAME = "hatch-cpp"
