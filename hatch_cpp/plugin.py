@@ -104,6 +104,7 @@ class HatchCppBuildHook(BuildHookInterface):
                 all(lib.py_limited_api for lib in build_plan.libraries),
             )
         else:
+            assert build_plan.cmake is not None
             build_data["pure_python"] = False
             machine = platform_machine()
             version_major = version_info.major

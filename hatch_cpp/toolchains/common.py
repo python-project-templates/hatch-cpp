@@ -48,50 +48,56 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
     binding: Binding = "cpython"
     std: str | None = None
 
-    include_dirs: list[str] = Field(default_factory=list, alias=AliasChoices("include_dirs", "include-dirs"))
-    include_dirs_linux: list[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_linux", "include-dirs-linux"))
-    include_dirs_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_darwin", "include-dirs-darwin"))
-    include_dirs_win32: list[str] = Field(default_factory=list, alias=AliasChoices("include_dirs_win32", "include-dirs-win32"))
+    include_dirs: list[str] = Field(default_factory=list, validation_alias=AliasChoices("include_dirs", "include-dirs"))
+    include_dirs_linux: list[str] = Field(default_factory=list, validation_alias=AliasChoices("include_dirs_linux", "include-dirs-linux"))
+    include_dirs_darwin: list[str] = Field(default_factory=list, validation_alias=AliasChoices("include_dirs_darwin", "include-dirs-darwin"))
+    include_dirs_win32: list[str] = Field(default_factory=list, validation_alias=AliasChoices("include_dirs_win32", "include-dirs-win32"))
 
-    library_dirs: list[str] = Field(default_factory=list, alias=AliasChoices("library_dirs", "library-dirs"))
-    library_dirs_linux: list[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_linux", "library-dirs-linux"))
-    library_dirs_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_darwin", "library-dirs-darwin"))
-    library_dirs_win32: list[str] = Field(default_factory=list, alias=AliasChoices("library_dirs_win32", "library-dirs-win32"))
+    library_dirs: list[str] = Field(default_factory=list, validation_alias=AliasChoices("library_dirs", "library-dirs"))
+    library_dirs_linux: list[str] = Field(default_factory=list, validation_alias=AliasChoices("library_dirs_linux", "library-dirs-linux"))
+    library_dirs_darwin: list[str] = Field(default_factory=list, validation_alias=AliasChoices("library_dirs_darwin", "library-dirs-darwin"))
+    library_dirs_win32: list[str] = Field(default_factory=list, validation_alias=AliasChoices("library_dirs_win32", "library-dirs-win32"))
 
     libraries: list[str] = Field(default_factory=list)
-    libraries_linux: list[str] = Field(default_factory=list, alias=AliasChoices("libraries_linux", "libraries-linux"))
-    libraries_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("libraries_darwin", "libraries-darwin"))
-    libraries_win32: list[str] = Field(default_factory=list, alias=AliasChoices("libraries_win32", "libraries-win32"))
+    libraries_linux: list[str] = Field(default_factory=list, validation_alias=AliasChoices("libraries_linux", "libraries-linux"))
+    libraries_darwin: list[str] = Field(default_factory=list, validation_alias=AliasChoices("libraries_darwin", "libraries-darwin"))
+    libraries_win32: list[str] = Field(default_factory=list, validation_alias=AliasChoices("libraries_win32", "libraries-win32"))
 
-    extra_compile_args: list[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args", "extra-compile-args"))
-    extra_compile_args_linux: list[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_linux", "extra-compile-args-linux"))
-    extra_compile_args_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_darwin", "extra-compile-args-darwin"))
-    extra_compile_args_win32: list[str] = Field(default_factory=list, alias=AliasChoices("extra_compile_args_win32", "extra-compile-args-win32"))
+    extra_compile_args: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_compile_args", "extra-compile-args"))
+    extra_compile_args_linux: list[str] = Field(
+        default_factory=list, validation_alias=AliasChoices("extra_compile_args_linux", "extra-compile-args-linux")
+    )
+    extra_compile_args_darwin: list[str] = Field(
+        default_factory=list, validation_alias=AliasChoices("extra_compile_args_darwin", "extra-compile-args-darwin")
+    )
+    extra_compile_args_win32: list[str] = Field(
+        default_factory=list, validation_alias=AliasChoices("extra_compile_args_win32", "extra-compile-args-win32")
+    )
 
-    extra_link_args: list[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args", "extra-link-args"))
-    extra_link_args_linux: list[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_linux", "extra-link-args-linux"))
-    extra_link_args_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_darwin", "extra-link-args-darwin"))
-    extra_link_args_win32: list[str] = Field(default_factory=list, alias=AliasChoices("extra_link_args_win32", "extra-link-args-win32"))
+    extra_link_args: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_link_args", "extra-link-args"))
+    extra_link_args_linux: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_link_args_linux", "extra-link-args-linux"))
+    extra_link_args_darwin: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_link_args_darwin", "extra-link-args-darwin"))
+    extra_link_args_win32: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_link_args_win32", "extra-link-args-win32"))
 
-    extra_objects: list[str] = Field(default_factory=list, alias=AliasChoices("extra_objects", "extra-objects"))
-    extra_objects_linux: list[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_linux", "extra-objects-linux"))
-    extra_objects_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_darwin", "extra-objects-darwin"))
-    extra_objects_win32: list[str] = Field(default_factory=list, alias=AliasChoices("extra_objects_win32", "extra-objects-win32"))
+    extra_objects: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_objects", "extra-objects"))
+    extra_objects_linux: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_objects_linux", "extra-objects-linux"))
+    extra_objects_darwin: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_objects_darwin", "extra-objects-darwin"))
+    extra_objects_win32: list[str] = Field(default_factory=list, validation_alias=AliasChoices("extra_objects_win32", "extra-objects-win32"))
 
-    define_macros: list[str] = Field(default_factory=list, alias=AliasChoices("define_macros", "define-macros"))
-    define_macros_linux: list[str] = Field(default_factory=list, alias=AliasChoices("define_macros_linux", "define-macros-linux"))
-    define_macros_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("define_macros_darwin", "define-macros-darwin"))
-    define_macros_win32: list[str] = Field(default_factory=list, alias=AliasChoices("define_macros_win32", "define-macros-win32"))
+    define_macros: list[str] = Field(default_factory=list, validation_alias=AliasChoices("define_macros", "define-macros"))
+    define_macros_linux: list[str] = Field(default_factory=list, validation_alias=AliasChoices("define_macros_linux", "define-macros-linux"))
+    define_macros_darwin: list[str] = Field(default_factory=list, validation_alias=AliasChoices("define_macros_darwin", "define-macros-darwin"))
+    define_macros_win32: list[str] = Field(default_factory=list, validation_alias=AliasChoices("define_macros_win32", "define-macros-win32"))
 
-    undef_macros: list[str] = Field(default_factory=list, alias=AliasChoices("undef_macros", "undef-macros"))
-    undef_macros_linux: list[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_linux", "undef-macros-linux"))
-    undef_macros_darwin: list[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_darwin", "undef-macros-darwin"))
-    undef_macros_win32: list[str] = Field(default_factory=list, alias=AliasChoices("undef_macros_win32", "undef-macros-win32"))
+    undef_macros: list[str] = Field(default_factory=list, validation_alias=AliasChoices("undef_macros", "undef-macros"))
+    undef_macros_linux: list[str] = Field(default_factory=list, validation_alias=AliasChoices("undef_macros_linux", "undef-macros-linux"))
+    undef_macros_darwin: list[str] = Field(default_factory=list, validation_alias=AliasChoices("undef_macros_darwin", "undef-macros-darwin"))
+    undef_macros_win32: list[str] = Field(default_factory=list, validation_alias=AliasChoices("undef_macros_win32", "undef-macros-win32"))
 
-    export_symbols: list[str] = Field(default_factory=list, alias=AliasChoices("export_symbols", "export-symbols"))
+    export_symbols: list[str] = Field(default_factory=list, validation_alias=AliasChoices("export_symbols", "export-symbols"))
     depends: list[str] = Field(default_factory=list)
 
-    py_limited_api: str | None = Field(default="", alias=AliasChoices("py_limited_api", "py-limited-api"))
+    py_limited_api: str | None = Field(default="", validation_alias=AliasChoices("py_limited_api", "py-limited-api"))
 
     @field_validator("py_limited_api", mode="before")
     @classmethod

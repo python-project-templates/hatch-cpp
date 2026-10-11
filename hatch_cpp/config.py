@@ -25,7 +25,7 @@ class HatchCppBuildConfig(BaseModel):
     name: str | None = Field(default=None)
     libraries: list[HatchCppLibrary] = Field(default_factory=list)
     cmake: HatchCppCmakeConfiguration | None = Field(default=None)
-    platform: HatchCppPlatform | None = Field(default_factory=HatchCppPlatform.default)
+    platform: HatchCppPlatform = Field(default_factory=HatchCppPlatform.default)
     vcpkg: HatchCppVcpkgConfiguration | None = Field(default_factory=HatchCppVcpkgConfiguration)
 
     @model_validator(mode="wrap")
@@ -72,7 +72,7 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
                 self._active_toolchains.append("vcpkg")
             else:
                 log.warning("HATCH_CPP_VCPKG=1 set but no vcpkg configuration found; ignoring.")
-        elif vcpkg_override != "0" and self.vcpkg and Path(self.vcpkg.vcpkg).exists():
+        elif vcpkg_override != "0" and self.vcpkg and self.vcpkg.vcpkg and Path(self.vcpkg.vcpkg).exists():
             self._active_toolchains.append("vcpkg")
 
         if self.libraries:
@@ -87,6 +87,7 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
 
         # Collect toolchain commands
         if "vcpkg" in self._active_toolchains:
+            assert self.vcpkg is not None
             self.commands.extend(self.vcpkg.generate(self))
 
         if "vanilla" in self._active_toolchains:
@@ -108,6 +109,7 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
                     self.commands.append(f"{compiler} {' '.join(library.sources)} {compile_flags} {link_flags}")
 
         if "cmake" in self._active_toolchains:
+            assert self.cmake is not None
             self.commands.extend(self.cmake.generate(self))
 
         return self.commands

@@ -1,3 +1,4 @@
+from importlib import import_module
 from os import listdir
 from pathlib import Path
 from shutil import rmtree
@@ -41,6 +42,6 @@ class TestHatchBuild:
         # import
         here = Path(__file__).parent / project
         path.insert(0, str(here))
-        import project.extension
+        extension = import_module("project.extension")
 
-        assert project.extension.hello() == "A string"
+        assert extension.hello() == "A string"

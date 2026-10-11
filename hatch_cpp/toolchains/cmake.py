@@ -3,7 +3,6 @@ from __future__ import annotations
 from os import environ
 from pathlib import Path
 from sys import version_info
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -33,7 +32,8 @@ class HatchCppCmakeConfiguration(BaseModel):
 
     include_flags: dict[str, str | int | float | bool] | None = Field(default=None)
 
-    def generate(self, config) -> dict[str, Any]:
+    def generate(self, config) -> list[str]:
+        assert self.root is not None
         commands = []
 
         # Derive prefix

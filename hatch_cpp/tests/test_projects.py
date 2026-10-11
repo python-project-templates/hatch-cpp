@@ -1,4 +1,5 @@
 import contextlib
+from importlib import import_module
 from os import listdir, remove
 from pathlib import Path
 from subprocess import check_call
@@ -60,6 +61,6 @@ class TestProject:
         # import
         here = Path(__file__).parent / project
         path.insert(0, str(here))
-        import project.extension
+        extension = import_module("project.extension")
 
-        assert project.extension.hello() == "A string"
+        assert extension.hello() == "A string"

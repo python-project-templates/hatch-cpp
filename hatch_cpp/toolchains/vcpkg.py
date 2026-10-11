@@ -31,7 +31,7 @@ VcpkgTriplet = Literal[
     "arm64-windows-static-md",
     "wasm32-emscripten",
 ]
-VcpkgPlatformDefaults = {
+VcpkgPlatformDefaults: dict[tuple[str, str], VcpkgTriplet] = {
     ("linux", "x86_64"): "x64-linux",
     ("linux", "aarch64"): "arm64-linux",
     ("darwin", "x86_64"): "x64-osx",
@@ -65,7 +65,7 @@ def _read_vcpkg_ref_from_gitmodules(vcpkg_root: Path) -> str | None:
 
 class HatchCppVcpkgConfiguration(BaseModel):
     vcpkg: str | None = Field(default="vcpkg.json")
-    vcpkg_root: Path | None = Field(default=Path("vcpkg"))
+    vcpkg_root: Path = Field(default=Path("vcpkg"))
     vcpkg_repo: str | None = Field(default="https://github.com/microsoft/vcpkg.git")
     vcpkg_triplet: VcpkgTriplet | None = Field(default=None)
     vcpkg_ref: str | None = Field(
