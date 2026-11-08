@@ -52,7 +52,7 @@ develop = [
     "hatchling",
     "hatch-build>=0.3.2",
     "mdformat",
-    "mdformat-frontmatter",
+    "mdformat-myst",
     "mdformat-tables>=1",
     "pytest",
     "pytest-cov",
