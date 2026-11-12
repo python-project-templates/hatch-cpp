@@ -106,6 +106,14 @@ depends = ["project/lib/libdemo"]
 
 The library builds first. On Linux it gets `-soname libdemo.so` and on macOS the install name `@rpath/libdemo.dylib`, unless `extra-link-args` already set one. The extension links the built file and gets an rpath to its directory (`$ORIGIN/lib`, `@loader_path/lib`), so the wheel works wherever it is installed. On Windows the extension links the import library `project/lib/libdemo.lib`, which is packaged next to the DLL. Windows has no rpath, so the package `__init__.py` must call `os.add_dll_directory` on `lib/` before importing the extension, and the library's header must mark its functions `__declspec(dllexport)` when building it and `__declspec(dllimport)` otherwise. `depends` is not supported for Emscripten builds.
 
+`library-source` (or `HATCH_CPP_LIBRARY_SOURCE`, which wins) picks how libraries named in `depends` are provided:
+
+- `bundled` (default): built and shipped in the wheel as above.
+- `external`: not built. Each one is found under `library-root` (or `HATCH_CPP_LIBRARY_ROOT`) with `lib/` and `include/`, through `pkg-config = "demo"`, or under `$PREFIX`/`$CONDA_PREFIX` (`Library/` on Windows), by its name without the `lib` prefix. The extension links it with `-L`/`-l` and gets no rpath, so the packager supplies the runtime path; this is the mode a conda recipe uses. Validation fields on the entry check the external library.
+- `direct`: not built. Its sources, include directories, and macros are compiled into each entry that depends on it, and no library ships. Use this for Pyodide.
+
+`static` and `python-package` are not supported yet.
+
 Wheel repair tools need to leave the bundled library in place: `auditwheel repair --exclude 'libdemo.so'`, `delocate-wheel --exclude libdemo`, `delvewheel repair --exclude libdemo.dll`.
 
 ### C ABI validation

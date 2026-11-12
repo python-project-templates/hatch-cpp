@@ -88,7 +88,7 @@ class HatchCppBuildHook(BuildHookInterface):
 
         if build_plan.libraries:
             # force include libraries
-            for library in build_plan.libraries:
+            for library in build_plan.built_libraries():
                 name = library.get_qualified_name(build_plan.platform.platform)
                 build_data["force_include"][name] = name
                 import_library = Path(name).with_suffix(".lib")
@@ -104,7 +104,7 @@ class HatchCppBuildHook(BuildHookInterface):
                 machine,
                 version_major,
                 version_minor,
-                all(lib.py_limited_api for lib in build_plan.libraries),
+                all(lib.py_limited_api for lib in build_plan.built_libraries()),
             )
         else:
             assert build_plan.cmake is not None

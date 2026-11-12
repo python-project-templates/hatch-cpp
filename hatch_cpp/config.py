@@ -5,16 +5,19 @@ from os import environ, system as system_call
 from pathlib import Path
 
 from hatch_native import (
+    ExternalLibrary,
     LibraryValidationConfig,
     check_exports,
     check_headers,
     prefixed_header_symbols,
+    resolve_external_library,
+    resolve_library_source,
     run_validation_command,
     shared_library_name,
     write_artifact_manifest,
 )
 from pkn import getSimpleLogger
-from pydantic import AliasChoices, BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, Field, PrivateAttr, model_validator
 
 from .toolchains import (
     BuildType,
@@ -45,6 +48,11 @@ class HatchCppBuildConfig(BaseModel):
     cmake: HatchCppCmakeConfiguration | None = Field(default=None)
     platform: HatchCppPlatform = Field(default_factory=HatchCppPlatform.default)
     vcpkg: HatchCppVcpkgConfiguration | None = Field(default_factory=HatchCppVcpkgConfiguration)
+    library_source: str = Field(
+        default="bundled",
+        validation_alias=AliasChoices("library-source", "library_source"),
+        description="How libraries named in depends are provided: bundled, external, or direct. Overridden by HATCH_CPP_LIBRARY_SOURCE.",
+    )
     artifacts: list[HatchCppArtifact] = Field(default_factory=list)
     artifact_manifest: bool = Field(default=False, validation_alias=AliasChoices("artifact-manifest", "artifact_manifest"))
     artifact_manifest_destination: str | None = Field(
@@ -77,6 +85,8 @@ class HatchCppBuildConfig(BaseModel):
             raise ValueError("Must not provide libraries when using cmake toolchain.")
         declared: dict[str, HatchCppLibrary] = {}
         for library in model.libraries:
+            if library.python_package is not None:
+                raise ValueError(f"Library '{library.name}' sets python-package, which hatch-cpp does not support yet.")
             for name in library.depends:
                 if name not in declared or declared[name].binding != "generic":
                     raise ValueError(f"Library '{library.name}' depends on '{name}', which must be a generic library declared before it.")
@@ -91,6 +101,48 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
     commands: list[str] = Field(default_factory=list)
 
     _active_toolchains: list[Toolchain] = []
+    _external_libraries: dict[str, ExternalLibrary] = PrivateAttr(default_factory=dict)
+    _skipped_libraries: set[str] = PrivateAttr(default_factory=set)
+
+    def built_libraries(self) -> list[HatchCppLibrary]:
+        """Libraries this build compiles; external and direct mode skip the ones other entries depend on."""
+        return [library for library in self.libraries if library.name not in self._skipped_libraries]
+
+    def _resolve_external(self, library: HatchCppLibrary) -> ExternalLibrary:
+        root = environ.get("HATCH_CPP_LIBRARY_ROOT") or (str(library.library_root) if library.library_root is not None else None)
+        name = Path(library.name).name
+        if name.startswith("lib") and len(name) > 3:
+            name = name[3:]
+        return resolve_external_library(
+            name,
+            label=library.name,
+            platform=self.platform.platform,
+            root_env_var="HATCH_CPP_LIBRARY_ROOT",
+            root=Path(root).resolve() if root else None,
+            pkg_config=library.pkg_config,
+        )
+
+    def _consumer(self, library: HatchCppLibrary, source: str) -> tuple[HatchCppLibrary, list[HatchCppLibrary]]:
+        """The library to compile and the libraries it links, after applying the library-source mode to its depends."""
+        dependencies = [next(other for other in self.libraries if other.name == name) for name in library.depends]
+        if not dependencies or source == "bundled":
+            return library, dependencies
+        if source == "external":
+            externals = [self._external_libraries[dependency.name] for dependency in dependencies]
+            return library.model_copy(
+                update={
+                    "include_dirs": [*library.include_dirs, *(str(external.include_dir) for external in externals if external.include_dir)],
+                    "library_dirs": [*library.library_dirs, *(str(external.library_dir) for external in externals)],
+                    "libraries": [*library.libraries, *(external.link_name for external in externals)],
+                }
+            ), []
+        return library.model_copy(
+            update={
+                "sources": [*library.sources, *(path for dependency in dependencies for path in dependency.sources)],
+                "include_dirs": [*library.include_dirs, *(path for dependency in dependencies for path in dependency.include_dirs)],
+                "define_macros": [*library.define_macros, *(macro for dependency in dependencies for macro in dependency.define_macros)],
+            }
+        ), []
 
     def generate(self):
         self.commands = []
@@ -127,9 +179,19 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
             if "vcpkg" in self._active_toolchains:
                 log.warning("vcpkg toolchain is active; ensure that your compiler is configured to use vcpkg includes and libs.")
 
+            source = resolve_library_source(self.library_source, env_var="HATCH_CPP_LIBRARY_SOURCE")
+            if source == "static":
+                raise ValueError("library-source 'static' is not supported by hatch-cpp; use bundled, external, or direct.")
+            linked = {name for library in self.libraries for name in library.depends}
+            self._external_libraries = {}
+            self._skipped_libraries = set() if source == "bundled" else linked
             for library_index, library in enumerate(self.libraries):
+                if library.name in self._skipped_libraries:
+                    if source == "external":
+                        self._external_libraries[library.name] = self._resolve_external(library)
+                    continue
+                library, dependencies = self._consumer(library, source)
                 compile_flags = self.platform.get_compile_flags(library, self.build_type)
-                dependencies = [next(other for other in self.libraries if other.name == name) for name in library.depends]
                 link_flags = self.platform.get_link_flags(library, self.build_type, dependencies)
                 compiler = self.platform.cc if library.language == "c" else self.platform.cxx
                 if self.platform.platform == "emscripten":
@@ -152,7 +214,7 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
         if self.platform.platform == "emscripten" and "vanilla" in self._active_toolchains:
             Path("build/hatch-cpp").mkdir(parents=True, exist_ok=True)
         if "vanilla" in self._active_toolchains:
-            for library in self.libraries:
+            for library in self.built_libraries():
                 Path(self._library_output(library)).parent.mkdir(parents=True, exist_ok=True)
         for command in self.commands:
             ret = system_call(command)
@@ -183,9 +245,14 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
 
     def validation_targets(self, packaged: list[str]) -> list[tuple[str, LibraryValidationConfig, str]]:
         """Libraries with validation fields set, plus every `artifacts` entry, as (label, config, project-relative path)."""
-        targets: list[tuple[str, LibraryValidationConfig, str]] = [
-            (library.name, library, self._library_output(library)) for library in self.libraries if _has_validation(library)
-        ]
+        targets: list[tuple[str, LibraryValidationConfig, str]] = []
+        for library in self.libraries:
+            if not _has_validation(library):
+                continue
+            if library.name in self._external_libraries:
+                targets.append((library.name, library, str(self._external_libraries[library.name].library)))
+            elif library.name not in self._skipped_libraries:
+                targets.append((library.name, library, self._library_output(library)))
         targets.extend((artifact.name, artifact, self._artifact_path(artifact, packaged)) for artifact in self.artifacts)
         return targets
 

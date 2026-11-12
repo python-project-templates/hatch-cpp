@@ -1,6 +1,7 @@
 from json import loads
+from os import environ
 from pathlib import Path
-from shutil import copytree
+from shutil import copy2, copytree
 from subprocess import check_call
 from sys import executable, platform
 
@@ -28,7 +29,7 @@ def test_c_abi_library_is_validated_linked_and_recorded(tmp_path):
     project = copytree(FIXTURE, tmp_path / "build_root")
     check_call(["hatch-build", "--hooks-only"], cwd=project)
 
-    suffix = {"win32": "dll", "darwin": "dylib"}.get(platform, "so")
+    suffix = _library_suffix()
     manifest = loads((project / "project/lib/hatch-cpp-artifacts.json").read_text())
     roles = {record["destination"]: record["role"] for record in manifest["artifacts"]}
     assert roles[f"project/lib/libdemo.{suffix}"] == "library"
@@ -37,6 +38,54 @@ def test_c_abi_library_is_validated_linked_and_recorded(tmp_path):
     # The extension finds libdemo through a package-relative rpath, so the package still imports after it moves.
     installed = copytree(project / "project", tmp_path / "site" / "project")
     check_call([executable, "-c", "import project.extension as e; assert e.answer() == 42"], cwd=installed.parent)
+
+
+def _library_suffix():
+    return {"win32": "dll", "darwin": "dylib"}.get(platform, "so")
+
+
+@pytest.mark.skipif(platform == "win32", reason="the external prefix is found through the loader path, which Windows does not have")
+def test_external_mode_links_a_prebuilt_library(tmp_path):
+    bundled = copytree(FIXTURE, tmp_path / "bundled")
+    check_call(["hatch-build", "--hooks-only"], cwd=bundled)
+    prefix = tmp_path / "prefix"
+    (prefix / "lib").mkdir(parents=True)
+    copy2(bundled / f"project/lib/libdemo.{_library_suffix()}", prefix / "lib")
+    copytree(bundled / "cpp/include", prefix / "include")
+
+    external = copytree(FIXTURE, tmp_path / "external")
+    env = {**environ, "HATCH_CPP_LIBRARY_SOURCE": "external", "HATCH_CPP_LIBRARY_ROOT": str(prefix)}
+    check_call(["hatch-build", "--hooks-only"], cwd=external, env=env)
+
+    assert not (external / f"project/lib/libdemo.{_library_suffix()}").exists()
+    manifest = loads((external / "project/lib/hatch-cpp-artifacts.json").read_text())
+    assert [record["role"] for record in manifest["artifacts"]] == ["python-extension"]
+    loader_path = "DYLD_LIBRARY_PATH" if platform == "darwin" else "LD_LIBRARY_PATH"
+    check_call(
+        [executable, "-c", "import project.extension as e; assert e.answer() == 42"],
+        cwd=external,
+        env={**environ, loader_path: str(prefix / "lib")},
+    )
+
+
+def test_direct_mode_compiles_the_library_into_the_extension(tmp_path):
+    project = copytree(FIXTURE, tmp_path / "direct")
+    check_call(["hatch-build", "--hooks-only"], cwd=project, env={**environ, "HATCH_CPP_LIBRARY_SOURCE": "direct"})
+
+    assert not (project / f"project/lib/libdemo.{_library_suffix()}").exists()
+    check_call([executable, "-c", "import project.extension as e; assert e.answer() == 42"], cwd=project)
+
+
+def test_static_mode_is_rejected(monkeypatch):
+    monkeypatch.setenv("HATCH_CPP_LIBRARY_SOURCE", "static")
+    extension = {"name": "project/extension", "sources": ["ext.c"], "depends": ["project/lib/libdemo"]}
+    with pytest.raises(ValueError, match="'static' is not supported"):
+        _plan(libraries=[LIBRARY, extension]).generate()
+
+
+def test_python_package_is_rejected():
+    with pytest.raises(ValidationError, match="python-package, which hatch-cpp does not support yet"):
+        _plan(libraries=[{**LIBRARY, "python-package": "other"}])
 
 
 def test_validation_fails_on_unexported_header_function(tmp_path, monkeypatch):

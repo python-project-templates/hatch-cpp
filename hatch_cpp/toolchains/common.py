@@ -9,7 +9,7 @@ from sys import base_exec_prefix, exec_prefix, executable, platform as sys_platf
 from sysconfig import get_config_var, get_path
 from typing import Any, Literal
 
-from hatch_native import LibraryValidationConfig
+from hatch_native import ExternalLibraryConfig, LibraryValidationConfig
 from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 __all__ = (
@@ -41,7 +41,7 @@ PlatformDefaults = {
 }
 
 
-class HatchCppLibrary(LibraryValidationConfig, validate_assignment=True):
+class HatchCppLibrary(LibraryValidationConfig, ExternalLibraryConfig, validate_assignment=True):
     """A C++ library."""
 
     name: str
