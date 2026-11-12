@@ -2,7 +2,7 @@ from json import loads
 from os import environ
 from pathlib import Path
 from shutil import copy2, copytree
-from subprocess import check_call
+from subprocess import check_call, run
 from sys import executable, platform
 
 import pytest
@@ -86,6 +86,29 @@ def test_static_mode_is_rejected(monkeypatch):
 def test_python_package_is_rejected():
     with pytest.raises(ValidationError, match="python-package, which hatch-cpp does not support yet"):
         _plan(libraries=[{**LIBRARY, "python-package": "other"}])
+
+
+CMAKE_FIXTURE = Path(__file__).parent / "test_project_cmake_c_abi"
+
+
+def test_cmake_library_is_validated_by_name(tmp_path):
+    project = copytree(CMAKE_FIXTURE, tmp_path / "cmake")
+    check_call(["hatch-build", "--hooks-only"], cwd=project)
+
+    manifest = loads((project / "project/lib/hatch-cpp-artifacts.json").read_text())
+    roles = sorted(record["role"] for record in manifest["artifacts"])
+    assert roles == ["library", "python-extension"]
+    installed = copytree(project / "project", tmp_path / "site" / "project")
+    check_call([executable, "-c", "import project.extension as e; assert e.answer() == 42"], cwd=installed.parent)
+
+
+def test_cmake_library_validation_failure_stops_the_build(tmp_path):
+    project = copytree(CMAKE_FIXTURE, tmp_path / "cmake")
+    pyproject = project / "pyproject.toml"
+    pyproject.write_text(pyproject.read_text().replace("DEMO_ABI_VERSION 1", "DEMO_ABI_VERSION 2"))
+    completed = run(["hatch-build", "--hooks-only"], check=False, cwd=project, capture_output=True, text=True)
+    assert completed.returncode != 0
+    assert "Artifact 'demo' expected ABI string was not found in headers: DEMO_ABI_VERSION 2" in completed.stderr + completed.stdout
 
 
 def test_validation_fails_on_unexported_header_function(tmp_path, monkeypatch):
