@@ -2,8 +2,10 @@
 
 #define DEMO_ABI_VERSION 1
 
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(DEMO_BUILD)
 #define DEMO_API __declspec(dllexport)
+#elif defined(_WIN32)
+#define DEMO_API __declspec(dllimport)
 #else
 #define DEMO_API __attribute__((visibility("default")))
 #endif

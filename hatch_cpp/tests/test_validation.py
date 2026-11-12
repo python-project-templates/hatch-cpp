@@ -2,7 +2,7 @@ from json import loads
 from pathlib import Path
 from shutil import copytree
 from subprocess import check_call
-from sys import platform
+from sys import executable, platform
 
 import pytest
 from pydantic import ValidationError
@@ -24,16 +24,19 @@ def _plan(**config):
     return HatchCppBuildPlan(name="demo", **config)
 
 
-def test_c_abi_library_is_validated_and_recorded(tmp_path):
-    project = copytree(FIXTURE, tmp_path / "project_root")
+def test_c_abi_library_is_validated_linked_and_recorded(tmp_path):
+    project = copytree(FIXTURE, tmp_path / "build_root")
     check_call(["hatch-build", "--hooks-only"], cwd=project)
 
     suffix = {"win32": "dll", "darwin": "dylib"}.get(platform, "so")
-    assert (project / f"project/lib/libdemo.{suffix}").is_file()
     manifest = loads((project / "project/lib/hatch-cpp-artifacts.json").read_text())
-    assert manifest["version"] == 1
-    assert manifest["artifacts"][0]["destination"] == f"project/lib/libdemo.{suffix}"
-    assert manifest["artifacts"][0]["role"] == "library"
+    roles = {record["destination"]: record["role"] for record in manifest["artifacts"]}
+    assert roles[f"project/lib/libdemo.{suffix}"] == "library"
+    assert [role for role in roles.values() if role == "python-extension"] == ["python-extension"]
+
+    # The extension finds libdemo through a package-relative rpath, so the package still imports after it moves.
+    installed = copytree(project / "project", tmp_path / "site" / "project")
+    check_call([executable, "-c", "import project.extension as e; assert e.answer() == 42"], cwd=installed.parent)
 
 
 def test_validation_fails_on_unexported_header_function(tmp_path, monkeypatch):
@@ -84,6 +87,40 @@ def test_artifact_without_unique_packaged_match_needs_a_path():
     plan = _plan(artifacts=[{"name": "missing"}])
     with pytest.raises(FileNotFoundError, match="Artifact 'missing' needs a path"):
         plan.validation_targets([])
+
+
+def test_depends_must_name_an_earlier_generic_library():
+    with pytest.raises(ValidationError, match="must be a generic library declared before it"):
+        _plan(libraries=[{"name": "project/extension", "sources": ["ext.c"], "depends": ["project/lib/libdemo"]}, LIBRARY])
+
+
+def test_generic_library_gets_layout_neutral_identity():
+    plan = _plan(libraries=[LIBRARY])
+    library = plan.libraries[0]
+    plan.platform.toolchain = "clang"
+    plan.platform.platform = "darwin"
+    assert "-Wl,-install_name,@rpath/libdemo.dylib" in plan.platform.get_link_flags(library)
+    plan.platform.platform = "linux"
+    assert "-Wl,-soname,libdemo.so" in plan.platform.get_link_flags(library)
+    library.extra_link_args = ["-Wl,-soname,libdemo.so.1"]
+    assert "-Wl,-soname,libdemo.so " not in plan.platform.get_link_flags(library)
+
+
+def test_depends_links_output_and_sets_rpath():
+    extension = {"name": "project/extension", "sources": ["ext.c"], "depends": ["project/lib/libdemo"]}
+    plan = _plan(libraries=[LIBRARY, extension])
+    producer, consumer = plan.libraries
+    plan.platform.toolchain = "gcc"
+    plan.platform.platform = "linux"
+    flags = plan.platform.get_link_flags(consumer, dependencies=[producer])
+    assert "project/lib/libdemo.so -Wl,-rpath,\\$ORIGIN/lib" in flags
+    plan.platform.toolchain = "msvc"
+    plan.platform.platform = "win32"
+    assert "project/lib/libdemo.lib" in plan.platform.get_link_flags(consumer, dependencies=[producer]).replace("\\", "/")
+    plan.platform.toolchain = "clang"
+    plan.platform.platform = "emscripten"
+    with pytest.raises(ValueError, match="not supported for Emscripten"):
+        plan.platform.get_link_flags(consumer, dependencies=[producer])
 
 
 def test_artifact_manifest_requires_destination():

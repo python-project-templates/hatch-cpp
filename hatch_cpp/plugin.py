@@ -91,6 +91,9 @@ class HatchCppBuildHook(BuildHookInterface):
             for library in build_plan.libraries:
                 name = library.get_qualified_name(build_plan.platform.platform)
                 build_data["force_include"][name] = name
+                import_library = Path(name).with_suffix(".lib")
+                if build_plan.platform.platform == "win32" and library.binding == "generic" and import_library.is_file():
+                    build_data["force_include"][import_library.as_posix()] = import_library.as_posix()
 
             build_data["pure_python"] = False
             machine = platform_machine()

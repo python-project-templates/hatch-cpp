@@ -75,6 +75,12 @@ class HatchCppBuildConfig(BaseModel):
         model = handler(data)
         if model.cmake and model.libraries:
             raise ValueError("Must not provide libraries when using cmake toolchain.")
+        declared: dict[str, HatchCppLibrary] = {}
+        for library in model.libraries:
+            for name in library.depends:
+                if name not in declared or declared[name].binding != "generic":
+                    raise ValueError(f"Library '{library.name}' depends on '{name}', which must be a generic library declared before it.")
+            declared[library.name] = library
         if model.artifact_manifest and not model.artifact_manifest_destination:
             raise ValueError("artifact-manifest requires artifact-manifest-destination.")
         return model
@@ -123,7 +129,8 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
 
             for library_index, library in enumerate(self.libraries):
                 compile_flags = self.platform.get_compile_flags(library, self.build_type)
-                link_flags = self.platform.get_link_flags(library, self.build_type)
+                dependencies = [next(other for other in self.libraries if other.name == name) for name in library.depends]
+                link_flags = self.platform.get_link_flags(library, self.build_type, dependencies)
                 compiler = self.platform.cc if library.language == "c" else self.platform.cxx
                 if self.platform.platform == "emscripten":
                     objects = []

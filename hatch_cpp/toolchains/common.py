@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from os import environ
+from os.path import relpath
 from pathlib import Path
 from re import match
 from shutil import which
@@ -378,9 +379,10 @@ class HatchCppPlatform(BaseModel):
             flags = flags.replace("  ", " ")
         return flags
 
-    def get_link_flags(self, library: HatchCppLibrary, build_type: BuildType = "release") -> str:
+    def get_link_flags(self, library: HatchCppLibrary, build_type: BuildType = "release", dependencies: list[HatchCppLibrary] | None = None) -> str:
         flags = ""
         effective_link_args = library.get_effective_link_args(self.platform)
+        effective_link_args.extend(self._library_identity_args(library, effective_link_args))
         effective_extra_objects = library.get_effective_extra_objects(self.platform)
         effective_libraries = library.get_effective_libraries(self.platform)
         effective_library_dirs = library.get_effective_library_dirs(self.platform)
@@ -392,6 +394,7 @@ class HatchCppPlatform(BaseModel):
             flags += " -shared"
             flags += " " + " ".join(effective_link_args)
             flags += " " + " ".join(effective_extra_objects)
+            flags += " " + " ".join(self._dependency_link_args(library, dependencies or []))
             flags += " " + " ".join(f"-l{lib}" for lib in effective_libraries)
             flags += " " + " ".join(f"-L{lib}" for lib in effective_library_dirs)
             flags += f" -o {library.get_qualified_name(self.platform)}"
@@ -422,8 +425,41 @@ class HatchCppPlatform(BaseModel):
                     flags += f" /LIBPATH:{libs_path!s}"
                     break
             flags += " " + " ".join(f"{lib}.lib" for lib in effective_libraries)
+            flags += " " + " ".join(self._dependency_link_args(library, dependencies or []))
             flags += " " + " ".join(f"/LIBPATH:{lib}" for lib in effective_library_dirs)
         # clean
         while flags.count("  "):
             flags = flags.replace("  ", " ")
         return flags
+
+    def _library_identity_args(self, library: HatchCppLibrary, link_args: list[str]) -> list[str]:
+        """Give a generic library a layout-neutral SONAME or @rpath install name unless the project sets one."""
+        if library.binding != "generic" or self.toolchain == "msvc":
+            return []
+        filename = Path(library.get_qualified_name(self.platform)).name
+        existing = " ".join(link_args)
+        if self.platform == "linux" and "soname" not in existing:
+            return [f"-Wl,-soname,{filename}"]
+        if self.platform == "darwin" and "install_name" not in existing:
+            return [f"-Wl,-install_name,@rpath/{filename}"]
+        return []
+
+    def _dependency_link_args(self, library: HatchCppLibrary, dependencies: list[HatchCppLibrary]) -> list[str]:
+        """Link `library` against the outputs of its `depends` entries and add an rpath to each output directory."""
+        if dependencies and self.platform == "emscripten":
+            raise ValueError(f"Library '{library.name}' sets depends, which is not supported for Emscripten builds.")
+        output_dir = Path(library.get_qualified_name(self.platform)).parent
+        args: list[str] = []
+        rpaths: list[str] = []
+        for dependency in dependencies:
+            dependency_path = Path(dependency.get_qualified_name(self.platform))
+            if self.platform == "win32":
+                args.append(str(dependency_path.with_suffix(".lib")))
+                continue
+            args.append(dependency_path.as_posix())
+            relative = Path(relpath(dependency_path.parent, output_dir)).as_posix()
+            origin = "@loader_path" if self.platform == "darwin" else "$ORIGIN"
+            rpath = _normalize_rpath(origin if relative == "." else f"{origin}/{relative}", self.platform)
+            if rpath not in rpaths:
+                rpaths.append(rpath)
+        return args + [f"-Wl,-rpath,{rpath}" for rpath in rpaths]

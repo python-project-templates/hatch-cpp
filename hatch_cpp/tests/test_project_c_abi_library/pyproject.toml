@@ -14,6 +14,9 @@ dependencies = [
 
 [tool.hatch.build]
 artifacts = [
+    "project/*.pyd",
+    "project/*.so",
+    "project/lib/*.lib",
     "project/lib/*.dll",
     "project/lib/*.dylib",
     "project/lib/*.so",
@@ -40,7 +43,15 @@ sources = ["cpp/demo.c"]
 language = "c"
 binding = "generic"
 include-dirs = ["cpp/include"]
+define-macros = ["DEMO_BUILD"]
 expected-headers = ["cpp/include/demo/demo.h"]
 header-symbol-prefix = "demo_"
 expected-abi-strings = ["DEMO_ABI_VERSION 1"]
 validate = true
+
+[[tool.hatch.build.hooks.hatch-cpp.libraries]]
+name = "project/extension"
+sources = ["cpp/extension.c"]
+language = "c"
+include-dirs = ["cpp/include"]
+depends = ["project/lib/libdemo"]
