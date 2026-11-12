@@ -8,12 +8,14 @@ from sys import base_exec_prefix, exec_prefix, executable, platform as sys_platf
 from sysconfig import get_config_var, get_path
 from typing import Any, Literal
 
+from hatch_native import LibraryValidationConfig
 from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 __all__ = (
     "Binding",
     "BuildType",
     "CompilerToolchain",
+    "HatchCppArtifact",
     "HatchCppLibrary",
     "HatchCppPlatform",
     "Language",
@@ -38,7 +40,7 @@ PlatformDefaults = {
 }
 
 
-class HatchCppLibrary(BaseModel, validate_assignment=True):
+class HatchCppLibrary(LibraryValidationConfig, validate_assignment=True):
     """A C++ library."""
 
     name: str
@@ -219,6 +221,13 @@ class HatchCppLibrary(BaseModel, validate_assignment=True):
         elif platform == "win32":
             macros.extend(self.undef_macros_win32)
         return macros
+
+
+class HatchCppArtifact(LibraryValidationConfig):
+    """A built or installed library to validate, named by a `libraries` entry, a path, or a CMake-installed library name."""
+
+    name: str
+    path: str | None = Field(default=None, description="Library path relative to the project root. Inferred from `name` when unset.")
 
 
 def _normalize_rpath(value: str, platform: Platform) -> str:

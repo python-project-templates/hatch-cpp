@@ -120,5 +120,11 @@ class HatchCppBuildHook(BuildHookInterface):
                 if path.suffix in (".pyd", ".dll", ".so", ".dylib"):
                     build_data["force_include"][str(path)] = str(path)
 
+        packaged = list(build_data["force_include"])
+        build_plan.validate(Path(self.root), packaged)
+        manifest = build_plan.write_manifest(Path(self.root), packaged)
+        if manifest is not None:
+            build_data["force_include"][manifest] = manifest
+
         for path in build_data["force_include"]:
             self._logger.info(f"Force include: {path}")

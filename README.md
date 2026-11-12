@@ -83,6 +83,39 @@ cmake_env_args = {} # env-specific cmake args to pass
 include_flags = {} # include flags to pass -D
 ```
 
+### C ABI validation
+
+A library that other code links against can be checked after it is built. Validation reads the export table from the binary, so it also works for cross builds and Pyodide. The field names match [hatch-rs](https://github.com/python-project-templates/hatch-rs) and come from [hatch-native](https://github.com/python-project-templates/hatch-native).
+
+Set the fields on a `libraries` entry:
+
+```toml
+[[tool.hatch.build.hooks.hatch-cpp.libraries]]
+name = "project/lib/libdemo"
+sources = ["cpp/demo.c"]
+language = "c"
+binding = "generic"
+include-dirs = ["cpp/include"]
+expected-headers = ["cpp/include/demo/demo.h"]
+header-symbol-prefix = "demo_"           # every demo_* function in the headers must be exported
+expected-abi-strings = ["DEMO_ABI_VERSION 1"]
+expected-symbols = []                    # extra symbols to require
+validate = false                         # also load the library with ctypes
+```
+
+Or list `artifacts` to validate files that `libraries` does not name, such as the output of a CMake install. Each entry takes the same fields plus `name` and an optional `path` relative to the project root. Without `path`, `name` matches a `libraries` entry, or else the one packaged file called `lib<name>.so`, `lib<name>.dylib`, or `<name>.dll`:
+
+```toml
+[[tool.hatch.build.hooks.hatch-cpp.artifacts]]
+name = "demo"
+expected-headers = ["project/include/demo/demo.h"]
+header-symbol-prefix = "demo_"
+```
+
+`validation-commands` run after the checks, with `{name}`, `{path}`, and `{header}` substituted and `HATCH_CPP_ARTIFACT_NAME` and `HATCH_CPP_ARTIFACT_PATH` in the environment.
+
+To record what was packaged, set `artifact-manifest = true` and `artifact-manifest-destination = "project/lib/hatch-cpp-artifacts.json"`. The JSON lists each packaged binary with its role (`python-extension` or `library`), platform, and profile, and is added to the wheel.
+
 ### CLI
 
 `hatch-cpp` is integrated with [`hatch-build`](https://github.com/python-project-templates/hatch-build) to allow easy configuration of options via command line:
