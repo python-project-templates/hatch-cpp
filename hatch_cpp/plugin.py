@@ -124,7 +124,7 @@ class HatchCppBuildHook(BuildHookInterface):
                     build_data["force_include"][str(path)] = str(path)
 
         packaged = list(build_data["force_include"])
-        build_plan.validate(Path(self.root), packaged)
+        build_plan.validate_artifacts(Path(self.root), packaged)
         manifest = build_plan.write_manifest(Path(self.root), packaged)
         if manifest is not None:
             build_data["force_include"][manifest] = manifest

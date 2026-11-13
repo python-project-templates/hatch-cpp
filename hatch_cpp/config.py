@@ -256,7 +256,7 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
         targets.extend((artifact.name, artifact, self._artifact_path(artifact, packaged)) for artifact in self.artifacts)
         return targets
 
-    def validate(self, root: Path, packaged: list[str]) -> None:
+    def validate_artifacts(self, root: Path, packaged: list[str]) -> None:
         """Check headers, ABI strings, and exports of each validation target, then run its validation commands."""
         for label, config, relative in self.validation_targets(packaged):
             library = root / relative

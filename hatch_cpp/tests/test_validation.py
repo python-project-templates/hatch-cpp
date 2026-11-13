@@ -122,7 +122,7 @@ def test_validation_fails_on_unexported_header_function(tmp_path, monkeypatch):
     output.write_bytes(b"")
 
     with pytest.raises(RuntimeError, match="expected symbol was not exported: demo_abi_version"):
-        plan.validate(tmp_path, [])
+        plan.validate_artifacts(tmp_path, [])
 
 
 def test_validation_fails_on_missing_abi_string(tmp_path):
@@ -134,7 +134,7 @@ def test_validation_fails_on_missing_abi_string(tmp_path):
     output.write_bytes(b"")
 
     with pytest.raises(RuntimeError, match="ABI string was not found"):
-        plan.validate(tmp_path, [])
+        plan.validate_artifacts(tmp_path, [])
 
 
 def test_libraries_without_validation_fields_are_not_targets():
