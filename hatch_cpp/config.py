@@ -197,8 +197,8 @@ class HatchCppBuildPlan(HatchCppBuildConfig):
                 if self.platform.platform == "emscripten":
                     objects = []
                     for source_index, source in enumerate(library.sources):
-                        obj = Path("build/hatch-cpp") / f"{library_index}-{source_index}-{Path(source).stem}.o"
-                        objects.append(str(obj))
+                        obj = f"build/hatch-cpp/{library_index}-{source_index}-{Path(source).stem}.o"
+                        objects.append(obj)
                         self.commands.append(f"{compiler} -c {source} {compile_flags} -o {obj}")
                     self.commands.append(f"{compiler} {' '.join(objects)} {link_flags}")
                 else:

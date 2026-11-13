@@ -15,7 +15,12 @@ class TestProject:
         [
             "test_project_basic",
             "test_project_override_classes",
-            "test_project_override_toolchain",
+            pytest.param(
+                "test_project_override_toolchain",
+                marks=pytest.mark.skipif(
+                    platform == "win32", reason="the fixture selects the gcc toolchain, whose flags clang rejects for MSVC targets"
+                ),
+            ),
             "test_project_pybind",
             "test_project_pybind_vcpkg",
             "test_project_nanobind",
