@@ -54,13 +54,10 @@ class HatchCppCmakeConfiguration(BaseModel):
             commands[-1] += f" -DCMAKE_INSTALL_PREFIX={Path(self.root).parent}"
 
         # TODO: CMAKE_CXX_COMPILER
-        # Respect CMAKE_GENERATOR environment variable
+        # Respect CMAKE_GENERATOR environment variable. Without it CMake picks its default,
+        # which on Windows is the newest installed Visual Studio.
         cmake_generator = environ.get("CMAKE_GENERATOR", "")
-        if config.platform.platform == "win32":
-            if not cmake_generator:
-                cmake_generator = "Visual Studio 17 2022"
-            commands[-1] += f' -G "{cmake_generator}"'
-        elif cmake_generator:
+        if cmake_generator:
             commands[-1] += f' -G "{cmake_generator}"'
 
         # Put in CMake flags
