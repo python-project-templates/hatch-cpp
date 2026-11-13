@@ -88,9 +88,12 @@ class HatchCppBuildHook(BuildHookInterface):
 
         if build_plan.libraries:
             # force include libraries
-            for library in build_plan.libraries:
+            for library in build_plan.built_libraries():
                 name = library.get_qualified_name(build_plan.platform.platform)
                 build_data["force_include"][name] = name
+                import_library = Path(name).with_suffix(".lib")
+                if build_plan.platform.platform == "win32" and library.binding == "generic" and import_library.is_file():
+                    build_data["force_include"][import_library.as_posix()] = import_library.as_posix()
 
             build_data["pure_python"] = False
             machine = platform_machine()
@@ -101,7 +104,7 @@ class HatchCppBuildHook(BuildHookInterface):
                 machine,
                 version_major,
                 version_minor,
-                all(lib.py_limited_api for lib in build_plan.libraries),
+                all(lib.py_limited_api for lib in build_plan.built_libraries()),
             )
         else:
             assert build_plan.cmake is not None
@@ -119,6 +122,12 @@ class HatchCppBuildHook(BuildHookInterface):
                     continue
                 if path.suffix in (".pyd", ".dll", ".so", ".dylib"):
                     build_data["force_include"][str(path)] = str(path)
+
+        packaged = list(build_data["force_include"])
+        build_plan.validate_artifacts(Path(self.root), packaged)
+        manifest = build_plan.write_manifest(Path(self.root), packaged)
+        if manifest is not None:
+            build_data["force_include"][manifest] = manifest
 
         for path in build_data["force_include"]:
             self._logger.info(f"Force include: {path}")

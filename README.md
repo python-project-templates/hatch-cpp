@@ -83,6 +83,72 @@ cmake_env_args = {} # env-specific cmake args to pass
 include_flags = {} # include flags to pass -D
 ```
 
+### Linking an extension against a library
+
+A `generic` library can ship next to the extension that links it, in the layout pyarrow uses. List the library first and name it in the extension's `depends`:
+
+```toml
+[[tool.hatch.build.hooks.hatch-cpp.libraries]]
+name = "project/lib/libdemo"
+sources = ["cpp/demo.c"]
+language = "c"
+binding = "generic"
+include-dirs = ["cpp/include"]
+define-macros = ["DEMO_BUILD"]
+
+[[tool.hatch.build.hooks.hatch-cpp.libraries]]
+name = "project/extension"
+sources = ["cpp/extension.c"]
+language = "c"
+include-dirs = ["cpp/include"]
+depends = ["project/lib/libdemo"]
+```
+
+The library builds first. On Linux it gets `-soname libdemo.so` and on macOS the install name `@rpath/libdemo.dylib`, unless `extra-link-args` already set one. The extension links the built file and gets an rpath to its directory (`$ORIGIN/lib`, `@loader_path/lib`), so the wheel works wherever it is installed. On Windows the extension links the import library `project/lib/libdemo.lib`, which is packaged next to the DLL. Windows has no rpath, so the package `__init__.py` must call `os.add_dll_directory` on `lib/` before importing the extension, and the library's header must mark its functions `__declspec(dllexport)` when building it and `__declspec(dllimport)` otherwise. `depends` is not supported for Emscripten builds.
+
+`library-source` (or `HATCH_CPP_LIBRARY_SOURCE`, which wins) picks how libraries named in `depends` are provided:
+
+- `bundled` (default): built and shipped in the wheel as above.
+- `external`: not built. Each one is found under `library-root` (or `HATCH_CPP_LIBRARY_ROOT`) with `lib/` and `include/`, through `pkg-config = "demo"`, or under `$PREFIX`/`$CONDA_PREFIX` (`Library/` on Windows), by its name without the `lib` prefix. The extension links it with `-L`/`-l` and gets no rpath, so the packager supplies the runtime path; this is the mode a conda recipe uses. Validation fields on the entry check the external library.
+- `direct`: not built. Its sources, include directories, and macros are compiled into each entry that depends on it, and no library ships. Use this for Pyodide.
+
+`static` and `python-package` are not supported yet.
+
+Wheel repair tools need to leave the bundled library in place: `auditwheel repair --exclude 'libdemo.so'`, `delocate-wheel --exclude libdemo`, `delvewheel repair --exclude libdemo.dll`.
+
+### C ABI validation
+
+A library that other code links against can be checked after it is built. Validation reads the export table from the binary, so it also works for cross builds and Pyodide. The field names match [hatch-rs](https://github.com/python-project-templates/hatch-rs) and come from [hatch-native](https://github.com/python-project-templates/hatch-native).
+
+Set the fields on a `libraries` entry:
+
+```toml
+[[tool.hatch.build.hooks.hatch-cpp.libraries]]
+name = "project/lib/libdemo"
+sources = ["cpp/demo.c"]
+language = "c"
+binding = "generic"
+include-dirs = ["cpp/include"]
+expected-headers = ["cpp/include/demo/demo.h"]
+header-symbol-prefix = "demo_"           # every demo_* function in the headers must be exported
+expected-abi-strings = ["DEMO_ABI_VERSION 1"]
+expected-symbols = []                    # extra symbols to require
+validate = false                         # also load the library with ctypes
+```
+
+Or list `artifacts` to validate files that `libraries` does not name, such as the output of a CMake install. Each entry takes the same fields plus `name` and an optional `path` relative to the project root. Without `path`, `name` matches a `libraries` entry, or else the one packaged file called `lib<name>.so`, `lib<name>.dylib`, or `<name>.dll`:
+
+```toml
+[[tool.hatch.build.hooks.hatch-cpp.artifacts]]
+name = "demo"
+expected-headers = ["project/include/demo/demo.h"]
+header-symbol-prefix = "demo_"
+```
+
+`validation-commands` run after the checks, with `{name}`, `{path}`, and `{header}` substituted and `HATCH_CPP_ARTIFACT_NAME` and `HATCH_CPP_ARTIFACT_PATH` in the environment.
+
+To record what was packaged, set `artifact-manifest = true` and `artifact-manifest-destination = "project/lib/hatch-cpp-artifacts.json"`. The JSON lists each packaged binary with its role (`python-extension` or `library`), platform, and profile, and is added to the wheel.
+
 ### CLI
 
 `hatch-cpp` is integrated with [`hatch-build`](https://github.com/python-project-templates/hatch-build) to allow easy configuration of options via command line:

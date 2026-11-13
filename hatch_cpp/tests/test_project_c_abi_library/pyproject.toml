@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.20"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hatch-cpp-test-project-c-abi-library"
+description = "C ABI library validated by hatch-cpp"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "hatchling>=1.20",
+    "hatch-cpp",
+]
+
+[tool.hatch.build]
+artifacts = [
+    "project/*.pyd",
+    "project/*.so",
+    "project/lib/*.lib",
+    "project/lib/*.dll",
+    "project/lib/*.dylib",
+    "project/lib/*.so",
+    "project/lib/*.json",
+]
+
+[tool.hatch.build.sources]
+src = "/"
+
+[tool.hatch.build.targets.sdist]
+packages = ["project"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["project"]
+
+[tool.hatch.build.hooks.hatch-cpp]
+verbose = true
+artifact-manifest = true
+artifact-manifest-destination = "project/lib/hatch-cpp-artifacts.json"
+
+[[tool.hatch.build.hooks.hatch-cpp.libraries]]
+name = "project/lib/libdemo"
+sources = ["cpp/demo.c"]
+language = "c"
+binding = "generic"
+include-dirs = ["cpp/include"]
+define-macros = ["DEMO_BUILD"]
+expected-headers = ["cpp/include/demo/demo.h"]
+header-symbol-prefix = "demo_"
+expected-abi-strings = ["DEMO_ABI_VERSION 1"]
+validate = true
+
+[[tool.hatch.build.hooks.hatch-cpp.libraries]]
+name = "project/extension"
+sources = ["cpp/extension.c"]
+language = "c"
+include-dirs = ["cpp/include"]
+depends = ["project/lib/libdemo"]
