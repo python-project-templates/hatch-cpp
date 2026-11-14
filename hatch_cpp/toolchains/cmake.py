@@ -10,16 +10,6 @@ from .common import Platform
 
 __all__ = ("HatchCppCmakeConfiguration",)
 
-DefaultMSVCGenerator = {
-    "12": "Visual Studio 12 2013",
-    "14": "Visual Studio 14 2015",
-    "14.0": "Visual Studio 14 2015",
-    "14.1": "Visual Studio 15 2017",
-    "14.2": "Visual Studio 16 2019",
-    "14.3": "Visual Studio 17 2022",
-    "14.4": "Visual Studio 17 2022",
-}
-
 
 class HatchCppCmakeConfiguration(BaseModel):
     root: Path | None = None
