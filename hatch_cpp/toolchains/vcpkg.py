@@ -57,7 +57,7 @@ def _read_vcpkg_ref_from_gitmodules(vcpkg_root: Path) -> str | None:
     parser.read(str(gitmodules_path))
 
     for section in parser.sections():
-        if parser.get(section, "path", fallback=None) == str(vcpkg_root):
+        if parser.get(section, "path", fallback=None) == vcpkg_root.as_posix():
             return parser.get(section, "branch", fallback=None)
 
     return None
@@ -93,7 +93,7 @@ class HatchCppVcpkgConfiguration(BaseModel):
     def _command_path(self, path: Path) -> str:
         if sys_platform == "win32":
             return str(path).replace("/", "\\")
-        return f"./{path}"
+        return f"./{path.as_posix()}"
 
     def _delete_dir_command(self, path: Path) -> str:
         if sys_platform == "win32":

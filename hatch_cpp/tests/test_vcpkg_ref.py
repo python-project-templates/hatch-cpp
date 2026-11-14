@@ -125,6 +125,11 @@ class TestVcpkgGenerate:
         """Create a minimal vcpkg.json so generate() produces commands."""
         (tmp_path / "vcpkg.json").write_text("{}")
 
+    def _pin_linux_host(self, monkeypatch):
+        """Make generate() behave as on an x86_64 Linux host, whatever host runs the test."""
+        monkeypatch.setattr("hatch_cpp.toolchains.vcpkg.sys_platform", "linux")
+        monkeypatch.setattr("hatch_cpp.toolchains.vcpkg.platform_machine", lambda: "x86_64")
+
     def test_generate_with_explicit_ref(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         self._make_vcpkg_env(tmp_path)
@@ -164,6 +169,7 @@ class TestVcpkgGenerate:
 
     def test_generate_uses_posix_command_paths(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
+        self._pin_linux_host(monkeypatch)
         self._make_vcpkg_env(tmp_path)
 
         cfg = HatchCppVcpkgConfiguration(vcpkg_triplet="x64-linux")
@@ -185,6 +191,7 @@ class TestVcpkgGenerate:
 
     def test_generate_detects_emscripten_triplet(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
+        self._pin_linux_host(monkeypatch)
         self._make_vcpkg_env(tmp_path)
         build_plan = SimpleNamespace(platform=SimpleNamespace(platform="emscripten"))
 
@@ -206,6 +213,7 @@ class TestVcpkgGenerate:
 
     def test_generate_skips_clone_when_vcpkg_root_exists(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
+        self._pin_linux_host(monkeypatch)
         self._make_vcpkg_env(tmp_path)
         vcpkg_root = tmp_path / "vcpkg"
         vcpkg_root.mkdir()
@@ -225,6 +233,7 @@ class TestVcpkgGenerate:
 
     def test_generate_reclones_when_vcpkg_root_exists_but_empty(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
+        self._pin_linux_host(monkeypatch)
         self._make_vcpkg_env(tmp_path)
         (tmp_path / "vcpkg").mkdir()
 
@@ -253,6 +262,7 @@ class TestVcpkgGenerate:
 
     def test_generate_reclones_when_vcpkg_exists_but_not_working(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
+        self._pin_linux_host(monkeypatch)
         self._make_vcpkg_env(tmp_path)
         vcpkg_root = tmp_path / "vcpkg"
         vcpkg_root.mkdir()
